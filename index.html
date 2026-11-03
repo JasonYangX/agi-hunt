@@ -5,9 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AGI Hunt — AI 工具与开发者资源导航</title>
 <meta name="description" content="AGI Hunt 收录主流 AI 工具与网站，按对话、写作、绘图、音频、视频、编程、Agent 技能、MCP 与 AI 学习等场景分类检索；同时提供 JSON、Base64、JWT、正则等 12 款本地运行的开发者小工具。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://www.agihunt.cn/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AGI Hunt">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="AGI Hunt — AI 工具与开发者资源导航">
+<meta property="og:description" content="AGI Hunt 收录主流 AI 工具与网站，按对话、写作、绘图、音频、视频、编程、Agent 技能、MCP 与 AI 学习等场景分类检索；同时提供 JSON、Base64、JWT、正则等 12 款本地运行的开发者小工具。">
+<meta property="og:url" content="https://www.agihunt.cn/">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#f6f6f2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%2314161b'/%3E%3Ccircle cx='20' cy='20' r='10.5' fill='none' stroke='%23f6f6f2' stroke-width='4.2' stroke-linecap='round' stroke-dasharray='48.38 17.59' transform='rotate(-22 20 20)'/%3E%3Ccircle cx='23.59' cy='10.13' r='4.2' fill='%237c8cff'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="/assets/css/styles.css">
 <script>
   /* 在首次绘制前恢复主题，避免深浅色闪烁 */
   try {
@@ -44,17 +53,17 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="#/tools" aria-label="AGI Hunt 首页">
+    <a class="brand" href="/" aria-label="AGI Hunt 首页">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><use href="#logo-mark"/></svg></span>
       <span>AGI Hunt</span>
       <span class="brand-sub">INDEX</span>
     </a>
 
     <nav class="nav" aria-label="主导航">
-      <a href="#/tools" data-nav="home">首页</a>
-      <a href="#/dev" data-nav="dev">开发者工具箱</a>
-      <a href="#/favorites" data-nav="favorites">我的收藏</a>
-      <a href="#/about" data-nav="about">关于</a>
+      <a href="/" data-nav="home">首页</a>
+      <a href="/dev/" data-nav="dev">开发者工具箱</a>
+      <a href="/favorites/" data-nav="favorites">我的收藏</a>
+      <a href="/about/" data-nav="about">关于</a>
     </nav>
 
     <div class="header-actions">
@@ -75,10 +84,10 @@
 </header>
 
 <div class="mobile-nav" id="mobile-nav">
-  <a href="#/tools" data-nav="home">首页</a>
-  <a href="#/dev" data-nav="dev">开发者工具箱</a>
-  <a href="#/favorites" data-nav="favorites">我的收藏</a>
-  <a href="#/about" data-nav="about">关于</a>
+  <a href="/" data-nav="home">首页</a>
+  <a href="/dev/" data-nav="dev">开发者工具箱</a>
+  <a href="/favorites/" data-nav="favorites">我的收藏</a>
+  <a href="/about/" data-nav="about">关于</a>
 </div>
 
 <main id="app" tabindex="-1"></main>
@@ -87,7 +96,7 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
-        <a class="brand" href="#/tools">
+        <a class="brand" href="/">
           <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><use href="#logo-mark"/></svg></span>
           <span>AGI Hunt</span>
         </a>
@@ -96,27 +105,28 @@
       <div class="footer-col">
         <h4>浏览</h4>
         <ul>
-          <li><a href="#/tools">全部工具</a></li>
-          <li><a href="#/tools?cat=chat">对话助手</a></li>
-          <li><a href="#/tools?cat=code">编程开发</a></li>
-          <li><a href="#/tools?cat=image">图像生成</a></li>
+          <li><a href="/">全部工具</a></li>
+          <li><a href="/category/chat/">对话助手</a></li>
+          <li><a href="/category/code/">编程开发</a></li>
+          <li><a href="/category/image/">图像生成</a></li>
+          <li><a href="/category/mcp/">MCP 服务</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>工具</h4>
         <ul>
-          <li><a href="#/dev/json">JSON 格式化</a></li>
-          <li><a href="#/dev/base64">Base64 编解码</a></li>
-          <li><a href="#/dev/jwt">JWT 解析</a></li>
-          <li><a href="#/dev">全部 12 款</a></li>
+          <li><a href="/dev/json/">JSON 格式化</a></li>
+          <li><a href="/dev/base64/">Base64 编解码</a></li>
+          <li><a href="/dev/jwt/">JWT 解析</a></li>
+          <li><a href="/dev/">全部 12 款</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>关于</h4>
         <ul>
-          <li><a href="#/about">收录标准</a></li>
-          <li><a href="#/about">数据说明</a></li>
-          <li><a href="#/favorites">我的收藏</a></li>
+          <li><a href="/about/">收录标准</a></li>
+          <li><a href="/about/">数据说明</a></li>
+          <li><a href="/favorites/">我的收藏</a></li>
         </ul>
       </div>
     </div>
@@ -155,12 +165,13 @@
 
 <noscript>
   <div style="max-width:640px;margin:60px auto;padding:24px;border:1px solid #e3e3dc;border-radius:12px;font-family:sans-serif">
-    本站依赖 JavaScript 完成检索与工具运行，请启用后刷新页面。
+    检索、筛选与工具运行需要 JavaScript；静态列表与工具介绍仍可直接阅读。
   </div>
 </noscript>
 
-<script src="assets/js/data.js"></script>
-<script src="assets/js/devtools.js"></script>
-<script src="assets/js/app.js"></script>
+<script src="/assets/js/data.js"></script>
+<script src="/assets/js/seo.js"></script>
+<script src="/assets/js/devtools.js"></script>
+<script src="/assets/js/app.js"></script>
 </body>
 </html>

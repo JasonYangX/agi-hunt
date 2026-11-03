@@ -1,7 +1,7 @@
 /* ============================================================
  * AGI Hunt — 应用层
  * 路由 / 检索 / 筛选 / 收藏 / 详情抽屉 / 命令面板
- * 无构建步骤，直接由浏览器执行。
+ * 构建期预渲染静态页，运行期由浏览器接管交互。
  * ============================================================ */
 (function () {
   'use strict';
@@ -24,6 +24,10 @@
   CATS.forEach(function (c) { CAT_BY_ID[c.id] = c; });
   var TOOL_BY_ID = {};
   TOOLS.forEach(function (t) { TOOL_BY_ID[t.id] = t; });
+  var DEV_BY_ID = {};
+  DEVTOOLS.forEach(function (d) { DEV_BY_ID[d.id] = d; });
+
+  var SEO = window.AGI_SEO || null;
 
   var FAV_KEY = 'agihunt:favorites';
   var THEME_KEY = 'agihunt:theme';
@@ -204,18 +208,24 @@
     return n;
   }
 
-  function renderTools() {
+  function renderTools(cat) {
     var topTags = ['对话', '开源', '中文', 'API', '本地部署', '视频生成', '多模态', '语音', '免费', '企业', '学术'];
     var list = filteredTools();
+    var catCount = cat ? TOOLS.filter(function (t) { return t.cat === cat.id; }).length : 0;
+    var eyebrow = cat ? 'CATEGORY · ' + cat.name : 'AI TOOL INDEX · 2026';
+    var heading = cat ? cat.name + ' AI 工具' : 'AI 工具库';
+    var lede = cat
+      ? cat.desc + '。共 ' + catCount + ' 个工具，可按定价与标签进一步筛选，点击卡片查看详情与官网入口。'
+      : TOOLS.length + ' 个经过筛选的工具与站点，覆盖对话、创作、编程、Agent 技能、MCP 服务与 AI 学习。支持关键词、分类、定价与标签交叉检索。';
 
     app.innerHTML = '' +
       '<div class="page-enter">' +
       '<section class="page-head"><div class="container">' +
         '<div class="page-head-top">' +
           '<div class="page-head-copy">' +
-            '<span class="eyebrow">AI TOOL INDEX · 2026</span>' +
-            '<h1>AI 工具库</h1>' +
-            '<p>' + TOOLS.length + ' 个经过筛选的工具与站点，覆盖对话、创作、编程、Agent 技能、MCP 服务与 AI 学习。支持关键词、分类、定价与标签交叉检索。</p>' +
+            '<span class="eyebrow">' + esc(eyebrow) + '</span>' +
+            '<h1>' + esc(heading) + '</h1>' +
+            '<p>' + esc(lede) + '</p>' +
           '</div>' +
           '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
             '<div class="search-inline">' +
@@ -226,6 +236,13 @@
               '<svg style="width:15px;height:15px" aria-hidden="true"><use href="#i-filter"/></svg> 筛选</button>' +
           '</div>' +
         '</div>' +
+        '<nav aria-label="按分类浏览" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">' +
+          '<a class="chip' + (state.cat === 'all' ? ' is-on' : '') + '" href="/">全部 ' + TOOLS.length + '</a>' +
+          CATS.map(function (c) {
+            return '<a class="chip' + (state.cat === c.id ? ' is-on' : '') + '" href="/category/' + c.id + '/">' +
+              esc(c.name) + '<span style="opacity:.55;margin-left:6px">' + countBy(function (t) { return t.cat === c.id; }) + '</span></a>';
+          }).join('') +
+        '</nav>' +
       '</div></section>' +
 
       '<div class="container"><div class="browse">' +
@@ -338,18 +355,31 @@
     if (sel) sel.value = state.sort;
   }
 
-  function syncToolsUrl() {
-    if (location.hash.indexOf('#/tools') !== 0) return;
+  /* 分类进入路径而非查询参数，避免 /?cat=chat 与 /category/chat/ 形成重复页 */
+  function toolsPath() {
+    return state.cat === 'all' ? '/' : '/category/' + state.cat + '/';
+  }
+
+  function isListPath() {
+    var p = location.pathname;
+    return p === '/' || p.indexOf('/category/') === 0;
+  }
+
+  function listUrl() {
     var p = new URLSearchParams();
     if (state.query) p.set('q', state.query);
-    if (state.cat !== 'all') p.set('cat', state.cat);
     if (state.pricing !== 'all') p.set('price', state.pricing);
     if (state.tags.length) p.set('tags', state.tags.join(','));
     if (state.sort !== 'recommended') p.set('sort', state.sort);
     var qs = p.toString();
-    var next = '#/tools' + (qs ? '?' + qs : '');
-    if (location.hash !== next) {
-      try { history.replaceState(null, '', next); } catch (e) {}
+    return toolsPath() + (qs ? '?' + qs : '');
+  }
+
+  function syncToolsUrl() {
+    if (!isListPath()) return;
+    var next = listUrl();
+    if (location.pathname + location.search !== next) {
+      try { history.replaceState(history.state, '', next); } catch (e) {}
     }
   }
 
@@ -360,6 +390,10 @@
     if (!keepQuery) state.query = '';
     var input = $('#tools-search');
     if (input) input.value = state.query;
+    if (location.pathname.indexOf('/category/') === 0) {
+      navigate(listUrl());
+      return;
+    }
     renderResultsArea();
     syncToolsUrl();
   }
@@ -378,18 +412,42 @@
       '<div class="page-enter">' +
       '<section class="page-head"><div class="container">' +
         '<div class="page-head-top"><div><h1>我的收藏</h1><p>保存在本机浏览器，不上传、不关联账号。换设备不会同步。</p></div>' +
-        '<a class="btn btn-ghost" href="#/tools">去工具库看看</a></div>' +
+        '<a class="btn btn-ghost" href="/">去工具库看看</a></div>' +
       '</div></section>' +
       '<section class="section"><div class="container">' +
         (list.length
           ? '<div class="tool-grid stagger">' + list.map(toolCard).join('') + '</div>'
           : '<div class="empty"><svg aria-hidden="true"><use href="#i-star"/></svg><h3>还没有收藏</h3>' +
             '<p>在工具卡片右上角点击星标，即可把常用工具固定在这里。</p>' +
-            '<a class="btn btn-primary" href="#/tools">浏览工具库</a></div>') +
+            '<a class="btn btn-primary" href="/">浏览工具库</a></div>') +
       '</div></section></div>';
   }
 
   /* ---------------- 开发者工具页 ---------------- */
+  function renderDevIndex() {
+    app.innerHTML = '' +
+      '<div class="page-enter">' +
+      '<section class="page-head"><div class="container">' +
+        '<div class="page-head-top"><div><h1>开发者工具箱</h1>' +
+          '<p>' + DEVTOOLS.length + ' 款高频小工具，纯前端实现。数据留在本机，断网可用，无需登录。</p></div>' +
+          '<span class="badge badge-free" style="height:26px">LOCAL ONLY</span>' +
+        '</div>' +
+      '</div></section>' +
+      '<section class="section"><div class="container">' +
+        '<div class="tool-grid stagger">' +
+        DEVTOOLS.map(function (d) {
+          return '<a class="tool-card" href="/dev/' + d.id + '/" style="text-decoration:none;color:inherit">' +
+            '<div class="tc-top"><span class="mono-mark" style="--h:232" aria-hidden="true">' +
+              '<span class="logo-initial">' + esc(d.badge) + '</span></span>' +
+              '<div class="tc-id"><h3>' + esc(d.name) + '</h3>' +
+                '<div class="vendor">' + esc(d.group) + '</div></div></div>' +
+            '<p class="tc-desc">' + esc(d.desc) + '</p>' +
+            '</a>';
+        }).join('') +
+        '</div>' +
+      '</div></section></div>';
+  }
+
   function renderDevPage(id) {
     var groups = [];
     DEVTOOLS.forEach(function (d) {
@@ -402,8 +460,10 @@
     app.innerHTML = '' +
       '<div class="page-enter">' +
       '<section class="page-head"><div class="container">' +
-        '<div class="page-head-top"><div><h1>开发者工具箱</h1>' +
-          '<p>' + DEVTOOLS.length + ' 款高频小工具，纯前端实现。数据留在本机，断网可用，无需登录。</p></div>' +
+        '<div class="page-head-top"><div>' +
+          '<span class="eyebrow">DEVELOPER TOOLBOX</span>' +
+          '<h1>' + esc(current.name) + '</h1>' +
+          '<p>' + esc(current.desc) + '。纯前端实现，数据留在本机，断网可用。</p></div>' +
           '<span class="badge badge-free" style="height:26px">LOCAL ONLY</span>' +
         '</div>' +
       '</div></section>' +
@@ -412,7 +472,8 @@
           groups.map(function (g) {
             return '<div class="dev-nav-group"><p class="dev-nav-title">' + esc(g.name) + '</p>' +
               g.items.map(function (d) {
-                return '<a class="dev-nav-item' + (d.id === current.id ? ' is-on' : '') + '" href="#/dev/' + d.id + '">' +
+                return '<a class="dev-nav-item' + (d.id === current.id ? ' is-on' : '') + '" href="/dev/' + d.id + '/"' +
+                  (d.id === current.id ? ' aria-current="page"' : '') + '>' +
                   '<span class="b">' + esc(d.badge) + '</span><span class="name">' + esc(d.name) + '</span></a>';
               }).join('') + '</div>';
           }).join('') +
@@ -449,7 +510,7 @@
         '<h2>开发者工具</h2>' +
         '<p>12 款工具全部由浏览器原生 API 实现：哈希使用 Web Crypto，编码使用 TextEncoder / TextDecoder，差异对比为逐行 LCS 算法。页面不加载第三方脚本，不发送统计请求。</p>' +
         '<div class="info-grid">' +
-          '<div class="info-card"><h3>零依赖</h3><p>没有框架与构建步骤，三个 JS 文件按顺序加载即可运行。</p></div>' +
+          '<div class="info-card"><h3>零依赖</h3><p>没有框架运行时，四个 JS 文件按顺序加载即可运行。</p></div>' +
           '<div class="info-card"><h3>零上传</h3><p>输入内容只存在于当前标签页，刷新即清除。</p></div>' +
           '<div class="info-card"><h3>可离线</h3><p>首次加载后可保存为本地页面，断网仍可使用工具箱。</p></div>' +
           '<div class="info-card"><h3>可迁移</h3><p>数据层与视图层分离，替换为接口请求即可接入后端。</p></div>' +
@@ -464,8 +525,23 @@
         '</ul>' +
 
         '<h2>技术栈</h2>' +
-        '<p>原生 HTML / CSS / JavaScript，Hash 路由，无构建工具。选择这套方案的原因是：首屏无框架运行时、部署只需静态托管、十年后仍能打开。当条目规模超过约 500 条或需要多人协作维护时，建议迁移到 Astro + 内容集合，详见项目内 <code>docs/architecture.md</code>。</p>' +
+        '<p>原生 HTML / CSS / JavaScript，History 路由，构建期由单个 Node 脚本预渲染静态页面。选择这套方案的原因是：首屏无框架运行时、每个条目都有独立可收录的 URL、部署只需静态托管、十年后仍能打开。当条目规模超过约 500 条或需要多人协作维护时，建议迁移到 Astro + 内容集合，详见项目内 <code>docs/architecture.md</code>。</p>' +
       '</div></div></section></div>';
+  }
+
+  /* ---------------- 404 ---------------- */
+  function renderNotFound() {
+    app.innerHTML = '' +
+      '<div class="page-enter">' +
+      '<section class="page-head"><div class="container">' +
+        '<div class="page-head-top"><div><h1>页面不存在</h1>' +
+        '<p>这个地址可能已经变更，或者链接输入有误。</p></div></div>' +
+      '</div></section>' +
+      '<section class="section"><div class="container">' +
+        '<div class="empty"><svg aria-hidden="true"><use href="#i-empty"/></svg>' +
+        '<h3>没有找到这个页面</h3><p>可以回到工具库重新检索，或从开发者工具箱继续。</p>' +
+        '<a class="btn btn-primary" href="/">返回 AI 工具库</a></div>' +
+      '</div></section></div>';
   }
 
   /* ---------------- 详情抽屉 ---------------- */
@@ -499,7 +575,7 @@
             '<svg style="width:15px;height:15px" fill="none" stroke="currentColor" aria-hidden="true"><use href="#i-star"/></svg>' + (fav ? '已收藏' : '收藏') + '</button>' +
         '</div>' +
         '<div class="drawer-sub"><h4>标签</h4><div class="tag-cloud">' +
-          t.tags.map(function (tag) { return '<a class="chip" href="#/tools?tags=' + encodeURIComponent(tag) + '" data-close-drawer>' + esc(tag) + '</a>'; }).join('') +
+          t.tags.map(function (tag) { return '<a class="chip" href="/category/' + t.cat + '/?tags=' + encodeURIComponent(tag) + '">' + esc(tag) + '</a>'; }).join('') +
         '</div></div>' +
         (alt.length ? '<div class="drawer-sub"><h4>同类工具</h4><div class="alt-list">' +
           alt.map(function (a) {
@@ -521,12 +597,14 @@
 
     if (push) {
       try {
-        if (location.hash.indexOf('#/tool/') === 0) {
-          history.replaceState({ drawer: id }, '', '#/tool/' + id);
+        var detailPath = '/tool/' + id + '/';
+        if (location.pathname.indexOf('/tool/') === 0) {
+          history.replaceState({ drawer: id }, '', detailPath);
         } else {
-          history.pushState({ drawer: id }, '', '#/tool/' + id);
+          history.pushState({ drawer: id }, '', detailPath);
           state.drawerPushed = true;
         }
+        applyMeta({ kind: 'tool', tool: t });
       } catch (e) {}
     }
   }
@@ -548,8 +626,9 @@
     if (state.drawerPushed) {
       state.drawerPushed = false;
       history.back();
-    } else if (location.hash.indexOf('#/tool/') === 0) {
-      try { history.replaceState(null, '', '#/tools'); } catch (e) {}
+    } else if (location.pathname.indexOf('/tool/') === 0) {
+      try { history.replaceState(null, '', '/'); } catch (e) {}
+      route();
     }
   }
 
@@ -634,18 +713,96 @@
     if (!item) return;
     closePalette();
     if (item.kind === 'tool') openTool(item.id, true);
-    else if (item.kind === 'dev') { location.hash = '#/dev/' + item.id; }
-    else if (item.kind === 'cat') { location.hash = '#/tools?cat=' + item.id; }
+    else if (item.kind === 'dev') navigate('/dev/' + item.id + '/');
+    else if (item.kind === 'cat') navigate('/category/' + item.id + '/');
   }
 
-  /* ---------------- 路由 ---------------- */
-  function parseHash() {
-    var raw = location.hash.replace(/^#\/?/, '');
-    if (!raw) raw = 'home';
+  /* ---------------- 路由 ----------------
+   * 每条工具 / 分类 / 开发工具都有独立 URL（History API + 目录化静态页），
+   * 未执行 JS 的抓取器读取的是 build.mjs 预渲染的同路径 HTML。
+   */
+  function resolveRoute() {
+    var segs = location.pathname.split('/').filter(Boolean);
+    var params = new URLSearchParams(location.search);
+    var head = segs[0] || '';
+
+    if (!head || head === 'index.html') return { kind: 'home', params: params, segs: segs };
+    if (head === 'category' && CAT_BY_ID[segs[1]]) {
+      return { kind: 'category', cat: CAT_BY_ID[segs[1]], params: params, segs: segs };
+    }
+    if (head === 'tool' && TOOL_BY_ID[segs[1]]) {
+      return { kind: 'tool', tool: TOOL_BY_ID[segs[1]], params: params, segs: segs };
+    }
+    if (head === 'dev') {
+      if (!segs[1]) return { kind: 'devIndex', params: params, segs: segs };
+      return { kind: 'dev', dev: DEV_BY_ID[segs[1]] || DEVTOOLS[0], params: params, segs: segs };
+    }
+    if (head === 'about') return { kind: 'about', params: params, segs: segs };
+    if (head === 'favorites') return { kind: 'favorites', params: params, segs: segs };
+    return { kind: 'notfound', params: params, segs: segs };
+  }
+
+  /* 站内跳转：保持 SPA 手感，同时把真实路径写入地址栏 */
+  function navigate(href) {
+    var url;
+    try { url = new URL(href, location.origin); } catch (e) { return; }
+    if (url.origin !== location.origin) { location.href = url.href; return; }
+    var next = url.pathname + url.search + url.hash;
+    if (next === location.pathname + location.search + location.hash) { route(); return; }
+    try {
+      history.pushState(null, '', next);
+    } catch (e) { location.href = next; return; }
+    route();
+  }
+
+  /* 旧版 hash 外链（如 #/tool/comfyui）301 式重定向到目录化地址 */
+  function migrateLegacyHash() {
+    var h = location.hash;
+    if (h.indexOf('#/') !== 0) return false;
+    var raw = h.slice(2);
     var qi = raw.indexOf('?');
-    var path = qi >= 0 ? raw.slice(0, qi) : raw;
     var params = new URLSearchParams(qi >= 0 ? raw.slice(qi + 1) : '');
-    return { segs: path.split('/').filter(Boolean), params: params, path: path };
+    var p = (qi >= 0 ? raw.slice(0, qi) : raw).replace(/\/+$/, '');
+    var target = null;
+    var m;
+
+    if ((m = p.match(/^tool\/([A-Za-z0-9_-]+)$/))) target = '/tool/' + m[1] + '/';
+    else if ((m = p.match(/^dev\/([A-Za-z0-9_-]+)$/))) target = '/dev/' + m[1] + '/';
+    else if (p === 'dev') target = '/dev/';
+    else if (p === 'about') target = '/about/';
+    else if (p === 'favorites') target = '/favorites/';
+    else if (p === '' || p === 'tools' || p === 'home') {
+      var cp = params.get('cat');
+      params.delete('cat');
+      target = cp && CAT_BY_ID[cp] ? '/category/' + cp + '/' : '/';
+    }
+    if (!target) return false;
+    var qs = params.toString();
+    try { location.replace(target + (qs ? '?' + qs : '')); } catch (e) { return false; }
+    return true;
+  }
+
+  function applyMeta(ctx) {
+    if (!SEO) return;
+    var t = SEO.title(ctx);
+    var d = SEO.description(ctx);
+    var url = SEO.SITE + SEO.canonical(ctx);
+    document.title = t;
+    var md = document.querySelector('meta[name="description"]');
+    if (md) md.setAttribute('content', d);
+    var lc = document.querySelector('link[rel="canonical"]');
+    if (lc) lc.setAttribute('href', url);
+    var ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', t);
+    var ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', d);
+    var ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute('content', url);
+    var rb = document.querySelector('meta[name="robots"]');
+    if (rb) {
+      rb.setAttribute('content', ctx.kind === 'favorites' || ctx.kind === 'notfound'
+        ? 'noindex,follow' : 'index,follow,max-image-preview:large');
+    }
   }
 
   function setActiveNav(view) {
@@ -656,27 +813,16 @@
   }
 
   function route() {
-    var r = parseHash();
-    var segs = r.segs;
-    var view = segs[0] || 'home';
-
-    /* 工具库即站点首页：空 hash、旧地址 #/home 与未知路径统一归一化到 #/tools */
-    var isToolDetail = view === 'tool' && segs[1] && TOOL_BY_ID[segs[1]];
-    var isKnown = view === 'tools' || view === 'favorites' || view === 'dev' || view === 'about' || isToolDetail;
-    if (!isKnown) {
-      view = 'tools';
-      segs = ['tools'];
-      r = { segs: segs, params: new URLSearchParams(), path: 'tools' };
-      try { history.replaceState(null, '', '#/tools'); } catch (e) {}
-    }
+    var r = resolveRoute();
 
     var prevPath = state.lastPath;
-    var isSamePath = prevPath === r.path;
-    state.lastPath = r.path;
+    var isSamePath = prevPath === location.pathname;
+    state.lastPath = location.pathname;
 
     if (AGI.Dev && AGI.Dev._timer) { clearInterval(AGI.Dev._timer); AGI.Dev._timer = null; }
     closePalette();
     hideDrawer();
+    state.drawerPushed = false;
     document.body.classList.remove('no-scroll');
     if (mobileNav) mobileNav.classList.remove('is-open');
     var navToggle = document.getElementById('nav-toggle');
@@ -685,31 +831,47 @@
     var filtersEl = $('#filters');
     if (filtersEl) filtersEl.classList.remove('is-open');
 
-    if (view === 'tools') {
+    if (r.kind === 'home') {
       applyParams(r.params);
       renderTools();
       setActiveNav('home');
-    } else if (view === 'favorites') {
+    } else if (r.kind === 'category') {
+      applyParams(r.params);
+      state.cat = r.cat.id;
+      renderTools(r.cat);
+      setActiveNav('home');
+    } else if (r.kind === 'favorites') {
       renderFavorites();
       setActiveNav('favorites');
-    } else if (view === 'dev') {
-      renderDevPage(segs[1] || 'json');
+    } else if (r.kind === 'devIndex') {
+      renderDevIndex();
       setActiveNav('dev');
-    } else if (view === 'about') {
+    } else if (r.kind === 'dev') {
+      renderDevPage(r.dev.id);
+      setActiveNav('dev');
+    } else if (r.kind === 'about') {
       renderAbout();
       setActiveNav('about');
-    } else if (view === 'tool' && segs[1] && TOOL_BY_ID[segs[1]]) {
+    } else if (r.kind === 'tool') {
       state.cat = 'all'; state.query = ''; state.pricing = 'all'; state.tags = []; state.sort = 'recommended';
       renderTools();
       setActiveNav('home');
-      openTool(segs[1], false);
+      /* 详情页的 H1 用工具名，与预渲染版本保持一致 */
+      var th1 = $('#app h1');
+      if (th1) th1.textContent = r.tool.name;
+      var tlede = $('#app .page-head-copy p');
+      if (tlede) tlede.textContent = r.tool.tagline + '（' + r.tool.vendor + ' · ' + catName(r.tool.cat) + '）';
+      var teyebrow = $('#app .eyebrow');
+      if (teyebrow) teyebrow.textContent = 'TOOL · ' + catName(r.tool.cat);
+      openTool(r.tool.id, false);
     } else {
-      applyParams(new URLSearchParams());
-      renderTools();
-      setActiveNav('home');
+      renderNotFound();
+      setActiveNav('');
     }
 
-    var cameFromDrawer = !!prevPath && prevPath.indexOf('tool/') === 0 && view !== 'tool';
+    applyMeta(r);
+
+    var cameFromDrawer = !!prevPath && prevPath.indexOf('/tool/') === 0 && r.kind !== 'tool';
     if (!isSamePath && !cameFromDrawer) window.scrollTo(0, 0);
     var h1 = $('#app h1');
     if (h1 && !drawer.classList.contains('is-open')) {
@@ -718,6 +880,24 @@
   }
 
   /* ---------------- 事件绑定 ---------------- */
+
+  /* 站内链接统一走 History 路由：href 保持真实路径，中键新开与抓取器都可用 */
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    if (a.target && a.target !== '_self') return;
+    if (a.hasAttribute('download')) return;
+    var href = a.getAttribute('href');
+    if (!href || href.charAt(0) !== '/' || href.charAt(1) === '/') return;
+    e.preventDefault();
+    if (drawer.classList.contains('is-open')) {
+      state.drawerPushed = false;
+      hideDrawer();
+      document.body.classList.remove('no-scroll');
+    }
+    navigate(href);
+  });
   document.addEventListener('click', function (e) {
     var target = e.target;
 
@@ -740,7 +920,7 @@
           b.setAttribute('aria-label', on ? '取消收藏' : '收藏');
         }
       });
-      if (location.hash.indexOf('#/favorites') === 0) renderFavorites();
+      if (location.pathname.indexOf('/favorites') === 0) renderFavorites();
       return;
     }
 
@@ -764,10 +944,9 @@
 
     var catBtn = target.closest('[data-cat-filter]');
     if (catBtn) {
-      state.cat = catBtn.getAttribute('data-cat-filter');
-      renderResultsArea();
-      syncToolsUrl();
+      var nextCat = catBtn.getAttribute('data-cat-filter');
       if (window.matchMedia('(max-width: 900px)').matches) closeFilterSheet();
+      navigate(nextCat === 'all' ? '/' : '/category/' + nextCat + '/');
       return;
     }
 
@@ -819,6 +998,10 @@
         state.tags = state.tags.filter(function (x) { return x !== val; });
       }
       renderResultsArea();
+      if (location.pathname.indexOf('/category/') === 0 && state.cat === 'all') {
+        navigate(listUrl());
+        return;
+      }
       syncToolsUrl();
       return;
     }
@@ -1011,6 +1194,11 @@
     advanceLogo(el);
   }, true);
 
-  window.addEventListener('hashchange', route);
-  route();
+  window.addEventListener('popstate', route);
+  window.addEventListener('hashchange', function () {
+    if (migrateLegacyHash()) return;
+    route();
+  });
+
+  if (!migrateLegacyHash()) route();
 })();
