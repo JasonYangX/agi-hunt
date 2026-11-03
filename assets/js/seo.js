@@ -57,7 +57,7 @@
       case 'devIndex':
         return '开发者工具箱 · ' + devtools().length + ' 款本地运行的在线工具 — ' + BRAND;
       case 'about':
-        return '关于 ' + BRAND + ' · 收录标准、数据说明与技术栈';
+        return '关于 ' + BRAND + ' · 收录标准与数据说明';
       case 'favorites':
         return '我的收藏 — ' + BRAND;
       case 'notfound':
@@ -87,7 +87,7 @@
         return devtools().length + ' 款高频开发者工具：' + devtools().map(function (d) { return d.name; }).join('、') +
           '。全部在浏览器本地运行，不上传输入内容，无需登录。';
       case 'about':
-        return 'AGI Hunt 的收录标准、数据来源说明、开发者工具实现方式与键盘快捷键。';
+        return 'AGI Hunt 的收录标准、数据来源说明、开发者工具与键盘快捷键。';
       case 'favorites':
         return '保存在本机浏览器中的 AI 工具收藏列表，不上传、不关联账号。';
       case 'notfound':

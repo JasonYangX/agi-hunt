@@ -1,0 +1,6 @@
+# AGI Hunt · https://www.agihunt.cn
+User-agent: *
+Allow: /
+Disallow: /favorites/
+
+Sitemap: https://www.agihunt.cn/sitemap.xml

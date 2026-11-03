@@ -381,12 +381,10 @@ function aboutBody() {
     '</ul>' +
     '<p>分类按<strong>任务</strong>划分而非按模型划分。同一个工具可能同时具备多种能力，此处只标注它最常被使用的场景，避免重复收录。</p>' +
     '<h2>数据说明</h2>' +
-    '<p>站点内容集中在 <code>assets/js/data.js</code> 一个文件中，每条记录包含名称、厂商、分类、简介、链接、标签、定价模式、平台与收录日期。页面在构建期预渲染为静态 HTML，检索与筛选由浏览器端接管。</p>' +
+    '<p>站点内容集中维护，每条记录包含名称、厂商、分类、简介、链接、标签、定价模式、平台与收录日期。</p>' +
     '<p>定价与功能具有时效性，标注（免费 / 免费增值 / 付费）仅作快速筛选之用，实际权益以官方页面为准。收录不构成推荐或背书。</p>' +
     '<h2>开发者工具</h2>' +
-    `<p>${DEVTOOLS.length} 款工具全部由浏览器原生 API 实现：哈希使用 Web Crypto，编码使用 TextEncoder / TextDecoder，差异对比为逐行 LCS 算法。页面不加载第三方脚本，不发送统计请求。</p>` +
-    '<h2>技术栈</h2>' +
-    '<p>原生 HTML / CSS / JavaScript，无框架运行时；构建期由 <code>build.mjs</code> 生成静态页面与 sitemap，部署只需静态托管。</p>' +
+    `<p>${DEVTOOLS.length} 款工具全部在浏览器内完成计算，不上传输入内容，也不加载第三方脚本。</p>` +
     `<p><a href="/">→ 浏览全部 ${TOOLS.length} 个工具</a></p>` +
     '</div></div></section></div>'
   );
@@ -536,15 +534,13 @@ written.push(emit('/favorites/', renderPage({ ctx: ctxOf.favorites(), body: favo
 written.push(emit('/404.html', renderPage({ ctx: ctxOf.notfound(), body: notFoundBody(), noindex: true })));
 
 /* ---------------- 站点级文件 ---------------- */
-writeFileSync(
-  join(DIST, 'robots.txt'),
-  ['User-agent: *', 'Allow: /', 'Disallow: /favorites/', '', `Sitemap: ${SITE}/sitemap.xml`, ''].join('\n'),
-  'utf8'
-);
+/* robots.txt 以仓库根目录的文件为准，构建时原样复制，避免规则两处漂移 */
+cpSync(join(ROOT, 'robots.txt'), join(DIST, 'robots.txt'));
 
 const today = new Date().toISOString().slice(0, 10);
-const sitemapEntries = written
-  .filter((p) => p !== '/404.html' && p !== '/favorites/')
+/* sitemap 与 urls.txt 共用同一份可收录集合：排除 noindex 的 404 与收藏页 */
+const indexable = written.filter((p) => p !== '/404.html' && p !== '/favorites/');
+const sitemapEntries = indexable
   .map((p) => ({ loc: SITE + p, lastmod: today, priority: p === '/' ? '1.0' : p.split('/').filter(Boolean).length >= 2 ? '0.7' : '0.8' }))
   .map(
     (e) =>
@@ -555,6 +551,13 @@ const sitemapEntries = written
 writeFileSync(
   join(DIST, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapEntries}\n</urlset>\n`,
+  'utf8'
+);
+
+/* 纯文本 URL 清单，供站长平台/IndexNow 等批量提交使用，与 sitemap 同源同序 */
+writeFileSync(
+  join(DIST, 'urls.txt'),
+  indexable.map((p) => SITE + p).join('\n') + '\n',
   'utf8'
 );
 
@@ -592,7 +595,7 @@ for (const page of pages) {
 
 console.log(`构建完成：${pages.length} 个 HTML 页面 · ${CATS.length} 个分类 · ${TOOLS.length} 条工具 · ${DEVTOOLS.length} 款开发工具`);
 console.log(`输出目录：${DIST}`);
-console.log(`sitemap：${written.length - 2} 条 URL`);
+console.log(`sitemap / urls.txt：${indexable.length} 条 URL`);
 if (issues.length) {
   console.warn(`\n自检发现 ${issues.length} 处问题：`);
   for (const i of issues.slice(0, 20)) console.warn(`  - ${i}`);
