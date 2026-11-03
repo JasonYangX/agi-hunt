@@ -286,22 +286,23 @@ html[data-theme="dark"] .cat-ico { color: hsl(var(--h) 62% 70%); }
   height: 100%; display: flex; align-items: center; gap: 28px;
 }
 .brand {
-  display: inline-flex; align-items: center; gap: 10px;
-  font-size: 16px; font-weight: 700; letter-spacing: -.03em;
+  display: inline-flex; align-items: center; gap: 11px;
+  font-size: 16px; font-weight: 600; letter-spacing: -.035em;
   flex: 0 0 auto;
 }
+/* 标记：环 + 点。环是索引，点是选中项，缺口给点让位。裸标记，不套容器。 */
 .brand-mark {
-  width: 28px; height: 28px; border-radius: 8px;
-  display: grid; place-items: center;
-  background: var(--ink); color: var(--bg);
-  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
-  letter-spacing: -.06em;
-  transition: background .2s;
+  --logo-dot: var(--accent);
+  width: 30px; height: 30px; flex: 0 0 auto;
+  display: block;
+  color: var(--ink);
+  transition: transform .42s var(--ease), color .2s var(--ease);
 }
-.brand:hover .brand-mark { background: var(--accent); color: #fff; }
+.brand-mark svg { width: 100%; height: 100%; }
+.brand:hover .brand-mark { color: var(--accent); transform: rotate(30deg); }
 .brand-sub {
-  font-family: var(--font-mono); font-size: 10px; font-weight: 400;
-  color: var(--ink-3); letter-spacing: .04em;
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 400;
+  color: var(--ink-3); letter-spacing: .1em; text-transform: uppercase;
   padding-left: 10px; margin-left: 2px;
   border-left: 1px solid var(--line);
 }

@@ -6,7 +6,7 @@
 <title>AGI Hunt — AI 工具与开发者资源导航</title>
 <meta name="description" content="AGI Hunt 收录主流 AI 工具与网站，按对话、写作、绘图、音频、视频、编程、Agent 技能、MCP 与 AI 学习等场景分类检索；同时提供 JSON、Base64、JWT、正则等 12 款本地运行的开发者小工具。">
 <meta name="theme-color" content="#f6f6f2">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314161b'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%23f6f6f2' text-anchor='middle'%3EAi%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%2314161b'/%3E%3Ccircle cx='20' cy='20' r='10.5' fill='none' stroke='%23f6f6f2' stroke-width='4.2' stroke-linecap='round' stroke-dasharray='48.38 17.59' transform='rotate(-22 20 20)'/%3E%3Ccircle cx='23.59' cy='10.13' r='4.2' fill='%237c8cff'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/styles.css">
 <script>
   /* 在首次绘制前恢复主题，避免深浅色闪烁 */
@@ -20,6 +20,11 @@
 
 <!-- 图标精灵 -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="logo-mark" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="3.4"
+            stroke-linecap="round" stroke-dasharray="55.29 20.11" transform="rotate(-22 20 20)"/>
+    <circle cx="24.1" cy="8.72" r="4" style="fill:var(--logo-dot, currentColor)"/>
+  </symbol>
   <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></symbol>
@@ -40,7 +45,7 @@
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="#/tools" aria-label="AGI Hunt 首页">
-      <span class="brand-mark">Ai</span>
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><use href="#logo-mark"/></svg></span>
       <span>AGI Hunt</span>
       <span class="brand-sub">INDEX</span>
     </a>
@@ -83,7 +88,7 @@
     <div class="footer-grid">
       <div class="footer-brand">
         <a class="brand" href="#/tools">
-          <span class="brand-mark">Ai</span>
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><use href="#logo-mark"/></svg></span>
           <span>AGI Hunt</span>
         </a>
         <p>一个克制、可维护的 AI 工具索引。收录以「真的会用第二次」为标准，不做数量竞赛。</p>
