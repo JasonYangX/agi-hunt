@@ -517,6 +517,36 @@ html[data-theme="dark"] .cat-ico { color: hsl(var(--h) 62% 70%); }
 }
 .filter-title button { font-size: 10px; color: var(--ink-4); letter-spacing: 0; text-transform: none; }
 .filter-title button:hover { color: var(--accent); }
+
+/* 左侧筛选栏整体抽屉式收起：外壳负责裁切，内层保持固定宽度避免重排 */
+.filters-col { min-width: 0; align-self: stretch; overflow: clip; }
+.sidebar-toggle { flex: 0 0 auto; gap: 6px; padding: 0 9px; color: var(--ink-3); }
+.sidebar-toggle:hover { color: var(--ink); }
+.sidebar-toggle .st-ico { width: 14px; height: 14px; flex: 0 0 auto; }
+.sidebar-toggle .st-chev {
+  width: 11px; height: 11px; flex: 0 0 auto; color: var(--ink-4);
+  transform: rotate(90deg);
+  transition: transform .3s var(--ease), color .16s var(--ease);
+}
+.browse.is-collapsed .sidebar-toggle .st-chev { transform: rotate(-90deg); }
+
+@media (min-width: 901px) {
+  .browse { transition: grid-template-columns .32s var(--ease), column-gap .32s var(--ease); }
+  .browse.is-collapsed { grid-template-columns: 0px 1fr; column-gap: 0px; }
+  .filters {
+    width: 216px;
+    transition: opacity .18s var(--ease), transform .32s var(--ease), visibility 0s linear 0s;
+  }
+  .browse.is-collapsed .filters {
+    opacity: 0; transform: translateX(-18px);
+    visibility: hidden; pointer-events: none;
+    transition: opacity .18s var(--ease), transform .32s var(--ease), visibility 0s linear .32s;
+  }
+}
+@media (min-width: 901px) and (max-width: 1080px) {
+  .filters { width: 190px; }
+}
+
 .filter-list { display: grid; gap: 1px; }
 .filter-item {
   display: flex; align-items: center; gap: 8px;
@@ -1075,6 +1105,8 @@ select.input-select {
   }
   .filter-sheet-head h3 { font-size: 16px; }
   .filter-toggle { display: inline-flex; }
+  .sidebar-toggle { display: none; }
+  .filters-col { display: contents; }
   .filter-scrim {
     position: fixed; inset: 0; z-index: 94;
     background: rgba(12, 14, 18, .38);

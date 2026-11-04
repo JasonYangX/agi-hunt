@@ -31,6 +31,7 @@
 
   var FAV_KEY = 'agihunt:favorites';
   var THEME_KEY = 'agihunt:theme';
+  var DRAWER_KEY = 'agihunt:filters:drawer';
 
   var favorites = loadFavorites();
   var state = {
@@ -58,6 +59,15 @@
   }
   function saveFavorites() {
     try { localStorage.setItem(FAV_KEY, JSON.stringify(Array.from(favorites))); } catch (e) {}
+  }
+
+  /* 左侧筛选栏：默认展开，用户收起后跨页面记住（像抽屉一样滑出） */
+  function loadDrawerOpen() {
+    try { return localStorage.getItem(DRAWER_KEY) !== 'closed'; } catch (e) { return true; }
+  }
+  var drawerOpen = loadDrawerOpen();
+  function saveDrawerState() {
+    try { localStorage.setItem(DRAWER_KEY, drawerOpen ? 'open' : 'closed'); } catch (e) {}
   }
 
   function toast(msg) {
@@ -245,7 +255,8 @@
         '</nav>' +
       '</div></section>' +
 
-      '<div class="container"><div class="browse">' +
+      '<div class="container"><div class="browse' + (drawerOpen ? '' : ' is-collapsed') + '" id="browse">' +
+        '<div class="filters-col">' +
         '<aside class="filters" id="filters" aria-label="筛选条件">' +
           '<div class="filter-sheet-head"><h3>筛选</h3>' +
             '<button type="button" class="icon-btn" data-close-filters aria-label="关闭筛选"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>' +
@@ -278,9 +289,15 @@
             '</div>' +
           '</div>' +
         '</aside>' +
+        '</div>' +
 
         '<div class="results">' +
           '<div class="results-bar">' +
+            '<button type="button" class="btn btn-ghost btn-sm sidebar-toggle" id="sidebar-toggle" data-toggle-sidebar aria-expanded="' + String(drawerOpen) + '" aria-controls="filters" aria-label="筛选栏" title="' + (drawerOpen ? '收起筛选栏' : '展开筛选栏') + '">' +
+              '<svg class="st-ico" aria-hidden="true"><use href="#i-panel"/></svg>' +
+              '<span>筛选</span>' +
+              '<svg class="st-chev" aria-hidden="true"><use href="#i-chevron"/></svg>' +
+            '</button>' +
             '<span class="results-count" id="results-count">找到 <b>' + list.length + '</b> 个工具</span>' +
             '<span class="spacer"></span>' +
             '<div class="select-wrap">' +
@@ -935,6 +952,17 @@
     var toolEl = target.closest('[data-tool]');
     if (toolEl && !target.closest('[data-visit]')) {
       openTool(toolEl.getAttribute('data-tool'), true);
+      return;
+    }
+
+    var drawerBtn = target.closest('[data-toggle-sidebar]');
+    if (drawerBtn) {
+      drawerOpen = !drawerOpen;
+      var browse = $('#browse');
+      if (browse) browse.classList.toggle('is-collapsed', !drawerOpen);
+      drawerBtn.setAttribute('aria-expanded', String(drawerOpen));
+      drawerBtn.setAttribute('title', drawerOpen ? '收起筛选栏' : '展开筛选栏');
+      saveDrawerState();
       return;
     }
 
