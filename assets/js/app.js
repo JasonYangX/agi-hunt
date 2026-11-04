@@ -32,6 +32,7 @@
   var FAV_KEY = 'agihunt:favorites';
   var THEME_KEY = 'agihunt:theme';
   var DRAWER_KEY = 'agihunt:filters:drawer';
+  var DEVNAV_KEY = 'agihunt:devnav:drawer';
 
   var favorites = loadFavorites();
   var state = {
@@ -68,6 +69,26 @@
   var drawerOpen = loadDrawerOpen();
   function saveDrawerState() {
     try { localStorage.setItem(DRAWER_KEY, drawerOpen ? 'open' : 'closed'); } catch (e) {}
+  }
+
+  /* 开发者工具页左侧工具列表：同一套抽屉交互，状态独立记忆 */
+  function loadDevNavOpen() {
+    try { return localStorage.getItem(DEVNAV_KEY) !== 'closed'; } catch (e) { return true; }
+  }
+  var devNavOpen = loadDevNavOpen();
+  function saveDevNavState() {
+    try { localStorage.setItem(DEVNAV_KEY, devNavOpen ? 'open' : 'closed'); } catch (e) {}
+  }
+
+  /* 抽屉开关按钮：首页筛选栏与开发者工具列表共用 */
+  function drawerToggleHtml(attr, controls, label, open, extraCls) {
+    return '<button type="button" class="btn btn-ghost btn-sm sidebar-toggle' + (extraCls ? ' ' + extraCls : '') + '" ' + attr +
+      ' aria-expanded="' + String(open) + '" aria-controls="' + controls + '" aria-label="' + esc(label) + '"' +
+      ' title="' + (open ? '收起' : '展开') + esc(label) + '">' +
+      '<svg class="st-ico" aria-hidden="true"><use href="#i-panel"/></svg>' +
+      '<span>' + esc(label) + '</span>' +
+      '<svg class="st-chev" aria-hidden="true"><use href="#i-chevron"/></svg>' +
+      '</button>';
   }
 
   function toast(msg) {
@@ -293,11 +314,7 @@
 
         '<div class="results">' +
           '<div class="results-bar">' +
-            '<button type="button" class="btn btn-ghost btn-sm sidebar-toggle" id="sidebar-toggle" data-toggle-sidebar aria-expanded="' + String(drawerOpen) + '" aria-controls="filters" aria-label="筛选栏" title="' + (drawerOpen ? '收起筛选栏' : '展开筛选栏') + '">' +
-              '<svg class="st-ico" aria-hidden="true"><use href="#i-panel"/></svg>' +
-              '<span>筛选</span>' +
-              '<svg class="st-chev" aria-hidden="true"><use href="#i-chevron"/></svg>' +
-            '</button>' +
+            drawerToggleHtml('data-toggle-sidebar', 'filters', '筛选', drawerOpen) +
             '<span class="results-count" id="results-count">找到 <b>' + list.length + '</b> 个工具</span>' +
             '<span class="spacer"></span>' +
             '<div class="select-wrap">' +
@@ -484,8 +501,9 @@
           '<span class="badge badge-free" style="height:26px">LOCAL ONLY</span>' +
         '</div>' +
       '</div></section>' +
-      '<div class="container"><div class="dev-shell">' +
-        '<aside class="dev-nav" aria-label="工具列表">' +
+      '<div class="container"><div class="dev-shell' + (devNavOpen ? '' : ' is-collapsed') + '" id="dev-shell">' +
+        '<div class="dev-nav-col">' +
+        '<aside class="dev-nav" id="dev-nav" aria-label="工具列表">' +
           groups.map(function (g) {
             return '<div class="dev-nav-group"><p class="dev-nav-title">' + esc(g.name) + '</p>' +
               g.items.map(function (d) {
@@ -496,10 +514,14 @@
           }).join('') +
           '<div class="dev-note">所有转换均在浏览器内完成，不发起网络请求。涉及敏感数据时可断网使用。</div>' +
         '</aside>' +
+        '</div>' +
         '<div class="dev-panel" id="dev-panel"></div>' +
       '</div></div></div>';
 
-    AGI.Dev.mount(current.id, $('#dev-panel'));
+    var panel = $('#dev-panel');
+    AGI.Dev.mount(current.id, panel);
+    var head = $('.dev-panel-head', panel);
+    if (head) head.insertAdjacentHTML('beforeend', drawerToggleHtml('data-toggle-dev-nav', 'dev-nav', '工具列表', devNavOpen, 'dev-nav-toggle'));
   }
 
   /* ---------------- 关于页 ---------------- */
@@ -961,8 +983,19 @@
       var browse = $('#browse');
       if (browse) browse.classList.toggle('is-collapsed', !drawerOpen);
       drawerBtn.setAttribute('aria-expanded', String(drawerOpen));
-      drawerBtn.setAttribute('title', drawerOpen ? '收起筛选栏' : '展开筛选栏');
+      drawerBtn.setAttribute('title', (drawerOpen ? '收起' : '展开') + '筛选');
       saveDrawerState();
+      return;
+    }
+
+    var devNavBtn = target.closest('[data-toggle-dev-nav]');
+    if (devNavBtn) {
+      devNavOpen = !devNavOpen;
+      var devShell = $('#dev-shell');
+      if (devShell) devShell.classList.toggle('is-collapsed', !devNavOpen);
+      devNavBtn.setAttribute('aria-expanded', String(devNavOpen));
+      devNavBtn.setAttribute('title', (devNavOpen ? '收起' : '展开') + '工具列表');
+      saveDevNavState();
       return;
     }
 

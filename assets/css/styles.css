@@ -518,7 +518,7 @@ html[data-theme="dark"] .cat-ico { color: hsl(var(--h) 62% 70%); }
 .filter-title button { font-size: 10px; color: var(--ink-4); letter-spacing: 0; text-transform: none; }
 .filter-title button:hover { color: var(--accent); }
 
-/* 左侧筛选栏整体抽屉式收起：外壳负责裁切，内层保持固定宽度避免重排 */
+/* 左侧栏整体抽屉式收起：外壳负责裁切，内层保持固定宽度避免重排 */
 .filters-col { min-width: 0; align-self: stretch; overflow: clip; }
 .sidebar-toggle { flex: 0 0 auto; gap: 6px; padding: 0 9px; color: var(--ink-3); }
 .sidebar-toggle:hover { color: var(--ink); }
@@ -528,7 +528,7 @@ html[data-theme="dark"] .cat-ico { color: hsl(var(--h) 62% 70%); }
   transform: rotate(90deg);
   transition: transform .3s var(--ease), color .16s var(--ease);
 }
-.browse.is-collapsed .sidebar-toggle .st-chev { transform: rotate(-90deg); }
+.is-collapsed .sidebar-toggle .st-chev { transform: rotate(-90deg); }
 
 @media (min-width: 901px) {
   .browse { transition: grid-template-columns .32s var(--ease), column-gap .32s var(--ease); }
@@ -786,6 +786,26 @@ html[data-theme="dark"] .filter-item.is-on .n { color: rgba(0, 0, 0, .45); }
 .dev-nav-item.is-on { background: var(--ink); color: var(--bg); }
 .dev-nav-item.is-on .b { background: rgba(255, 255, 255, .16); color: #fff; }
 html[data-theme="dark"] .dev-nav-item.is-on .b { background: rgba(0, 0, 0, .3); }
+
+/* 工具列表抽屉：与首页筛选栏同一套交互 */
+.dev-nav-col { min-width: 0; align-self: stretch; overflow: clip; }
+.dev-nav-toggle { align-self: center; }
+@media (min-width: 901px) {
+  .dev-shell { transition: grid-template-columns .32s var(--ease), column-gap .32s var(--ease); }
+  .dev-shell.is-collapsed { grid-template-columns: 0px 1fr; column-gap: 0px; }
+  .dev-nav {
+    width: 232px;
+    transition: opacity .18s var(--ease), transform .32s var(--ease), visibility 0s linear 0s;
+  }
+  .dev-shell.is-collapsed .dev-nav {
+    opacity: 0; transform: translateX(-18px);
+    visibility: hidden; pointer-events: none;
+    transition: opacity .18s var(--ease), transform .32s var(--ease), visibility 0s linear .32s;
+  }
+}
+@media (min-width: 901px) and (max-width: 1080px) {
+  .dev-nav { width: 200px; }
+}
 .dev-note {
   margin-top: 24px; padding: 12px 13px;
   border-radius: 9px; border: 1px solid var(--line);
@@ -1122,9 +1142,11 @@ select.input-select {
     scrollbar-width: none;
   }
   .dev-nav::-webkit-scrollbar { display: none; }
+  .dev-nav-col { display: contents; }
+  .dev-nav-toggle { display: none; }
   .dev-nav-title { display: none; }
   .dev-nav-group { display: contents; }
-  .dev-nav-item { flex: 0 0 auto; padding: 7px 11px; border: 1px solid var(--line); background: var(--surface); }
+  .dev-nav-item { flex: 0 0 auto; width: auto; padding: 7px 11px; border: 1px solid var(--line); background: var(--surface); }
   .dev-nav-item .name { display: inline; }
   .dev-note { display: none; }
 
