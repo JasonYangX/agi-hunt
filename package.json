@@ -6,6 +6,8 @@
   "description": "AGI Hunt — AI 工具索引与开发者工具箱（静态站，构建期预渲染）",
   "scripts": {
     "build": "node build.mjs",
-    "preview": "python3 -m http.server -d dist 8080"
+    "preview": "python3 -m http.server -d dist 8080",
+    "indexnow": "node scripts/indexnow.mjs",
+    "indexnow:dry": "node scripts/indexnow.mjs --dry-run"
   }
 }
