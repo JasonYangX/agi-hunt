@@ -336,50 +336,6 @@
       '</div>';
 
     renderResultsArea();
-
-    /* 分类页补齐正文与内链：与 build.mjs 的 categoryBody 保持一致，
-       避免客户端渲染后丢失「怎么选」段落与底部链接 */
-    if (cat) {
-      var copy = (SEO && SEO.CAT_SEO && SEO.CAT_SEO[cat.id]) || {};
-      var extra = '';
-      if (copy.intro) {
-        extra += '<section class="section"><div class="container"><div class="prose">' +
-          '<h2>' + esc(copy.h1 || cat.name) + '怎么选</h2>' +
-          '<p>' + esc(copy.intro) + '</p>' +
-          (copy.pick && copy.pick.length
-            ? '<ul>' + copy.pick.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>'
-            : '') +
-          '</div></div></section>';
-      }
-      var hubs = hubsOfCategory(cat.id);
-      if (hubs.length) {
-        extra += '<section class="section"><div class="container">' +
-          '<h2 style="font-size:19px;margin:0 0 12px">相关合集</h2>' +
-          '<ul style="columns:2;line-height:2">' +
-          hubs.map(function (h) {
-            return '<li><a href="/tag/' + h.slug + '/">' + esc(h.name) + '</a> — ' + esc(hubBrief(h)) + '</li>';
-          }).join('') +
-          '</ul></div></section>';
-      }
-      extra += '<section class="section"><div class="container">' +
-        '<h2 style="font-size:19px;margin:0 0 12px">其他分类</h2>' +
-        '<ul style="columns:2;line-height:2">' +
-        CATS.filter(function (c) { return c.id !== cat.id; }).map(function (c) {
-          return '<li><a href="/category/' + c.id + '/">' + esc(c.name) + '</a> — ' + esc(c.desc) + '</li>';
-        }).join('') +
-        '</ul></div></section>';
-      app.insertAdjacentHTML('beforeend', extra);
-    }
-  }
-
-  function hubsOfCategory(catId) {
-    return ((SEO && SEO.HUBS) || []).filter(function (h) {
-      return TOOLS.some(function (t) { return t.cat === catId && t.tags.indexOf(h.tag) >= 0; });
-    });
-  }
-
-  function hubBrief(h) {
-    return h.intro.split('。')[0] + '。';
   }
 
   function activeFilterChips() {
@@ -650,7 +606,6 @@
       ['语言', { zh: '中文', en: '英文', multi: '多语言' }[t.lang] || t.lang],
       ['收录时间', t.added]
     ];
-    var hubs = ((SEO && SEO.HUBS) || []).filter(function (h) { return t.tags.indexOf(h.tag) >= 0; });
 
     app.innerHTML = '' +
       '<div class="page-enter"><div class="container" style="padding-top:28px">' +
@@ -673,11 +628,6 @@
         '<div class="tag-cloud">' +
           t.tags.map(function (tag) { return '<a class="chip" href="/category/' + t.cat + '/?tags=' + encodeURIComponent(tag) + '">' + esc(tag) + '</a>'; }).join('') +
         '</div>' +
-        (hubs.length
-          ? '<h2>相关合集</h2><ul>' + hubs.map(function (h) {
-              return '<li><a href="/tag/' + h.slug + '/">' + esc(h.name) + '</a> — ' + esc(hubBrief(h)) + '</li>';
-            }).join('') + '</ul>'
-          : '') +
         (alt.length
           ? '<h2>同类工具</h2><ul>' + alt.map(function (a) {
               return '<li><a href="/tool/' + a.id + '/">' + esc(a.name) + '</a> — ' + esc(a.tagline) + '</li>';
@@ -713,19 +663,7 @@
       '</div></section>' +
       '<section class="section"><div class="container"><div class="prose">' +
         '<h2>关于' + esc(hub.name) + '</h2><p>' + esc(hub.intro) + '</p>' +
-      '</div></div></section>' +
-      '<section class="section"><div class="container">' +
-        '<h2 style="font-size:19px;margin:0 0 12px">按场景浏览</h2>' +
-        '<ul style="columns:2;line-height:2">' +
-          CATS.map(function (c) {
-            return '<li><a href="/category/' + c.id + '/">' + esc(hubCatTitle(c)) + '</a> — ' + esc(c.desc) + '</li>';
-          }).join('') +
-        '</ul>' +
-      '</div></section></div>';
-  }
-
-  function hubCatTitle(c) {
-    return (SEO && SEO.h1 ? SEO.h1({ kind: 'category', cat: c }) : '') || c.name;
+      '</div></div></section></div>';
   }
 
   /* ---------------- 详情抽屉 ---------------- */

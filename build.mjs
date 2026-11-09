@@ -262,8 +262,6 @@ function homeBody() {
 
 function categoryBody(cat) {
   const list = TOOLS.filter((t) => t.cat === cat.id);
-  const others = CATS.filter((c) => c.id !== cat.id);
-  const copy = SEO.CAT_SEO[cat.id] || {};
   const h1Text = SEO.h1({ kind: 'category', cat });
   return (
     '<div class="page-enter">' +
@@ -277,46 +275,8 @@ function categoryBody(cat) {
     `<h2 style="font-size:19px;margin:0 0 16px">${esc(cat.name)}工具列表（${list.length}）</h2>` +
     grid(list) +
     '</div></section>' +
-    (copy.intro
-      ? '<section class="section"><div class="container"><div class="prose">' +
-        `<h2>${esc(copy.h1 || cat.name)}怎么选</h2>` +
-        `<p>${esc(copy.intro)}</p>` +
-        (copy.pick && copy.pick.length
-          ? '<ul>' + copy.pick.map((p) => `<li>${esc(p)}</li>`).join('') + '</ul>'
-          : '') +
-        '</div></div></section>'
-      : '') +
-    (hubsOfCategory(cat.id).length
-      ? '<section class="section"><div class="container">' +
-        '<h2 style="font-size:19px;margin:0 0 12px">相关合集</h2>' +
-        '<ul style="columns:2;line-height:2">' +
-        hubsOfCategory(cat.id)
-          .map((h) => `<li><a href="/tag/${h.slug}/">${esc(h.name)}</a> — ${esc(hubBrief(h))}</li>`)
-          .join('') +
-        '</ul></div></section>'
-      : '') +
-    '<section class="section"><div class="container">' +
-    '<h2 style="font-size:19px;margin:0 0 12px">其他分类</h2>' +
-    '<ul style="columns:2;line-height:2">' +
-    others.map((c) => `<li><a href="/category/${c.id}/">${esc(c.name)}</a> — ${esc(c.desc)}</li>`).join('') +
-    '</ul>' +
-    '</div></section></div>'
+    '</div>'
   );
-}
-
-/* 分类与合集的交集：只展示真正收录了本类工具的合集 */
-function hubsOfCategory(catId) {
-  const ids = new Set(TOOLS.filter((t) => t.cat === catId).map((t) => t.id));
-  return HUBS.filter((h) => TOOLS.some((t) => ids.has(t.id) && t.tags.includes(h.tag)));
-}
-
-function hubsOfTool(t) {
-  return HUBS.filter((h) => t.tags.includes(h.tag));
-}
-
-/* 合集摘要取首句，避免在列表里出现半截句子 */
-function hubBrief(h) {
-  return h.intro.split('。')[0] + '。';
 }
 
 function toolBody(t) {
@@ -350,13 +310,6 @@ function toolBody(t) {
     '<div class="tag-cloud">' +
     t.tags.map((tag) => `<a class="chip" href="/category/${t.cat}/?tags=${encodeURIComponent(tag)}">${esc(tag)}</a>`).join('') +
     '</div>' +
-    (hubsOfTool(t).length
-      ? '<h2>相关合集</h2><ul>' +
-        hubsOfTool(t)
-          .map((h) => `<li><a href="/tag/${h.slug}/">${esc(h.name)}</a> — ${esc(hubBrief(h))}</li>`)
-          .join('') +
-        '</ul>'
-      : '') +
     (alt.length
       ? '<h2>同类工具</h2><ul>' +
         alt.map((a) => `<li><a href="/tool/${a.id}/">${esc(a.name)}</a> — ${esc(a.tagline)}</li>`).join('') +
@@ -431,11 +384,7 @@ function tagBody(h) {
     `<h2>关于${esc(title)}</h2>` +
     `<p>${esc(h.intro)}</p>` +
     '</div></div></section>' +
-    '<section class="section"><div class="container">' +
-    '<h2 style="font-size:19px;margin:0 0 12px">按场景浏览</h2>' +
-    '<ul style="columns:2;line-height:2">' +
-    CATS.map((c) => `<li><a href="/category/${c.id}/">${esc(SEO.h1({ kind: 'category', cat: c }) || c.name)}</a> — ${esc(c.desc)}</li>`).join('') +
-    '</ul></div></section></div>'
+    '</div>'
   );
 }
 
