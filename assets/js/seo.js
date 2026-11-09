@@ -254,6 +254,23 @@
   function platformLabel(list) {
     return (list || []).map(function (p) { return PLATFORM[p] || p; }).join('、');
   }
+
+  /* 标题宽度：中日韩字符按 2 计，西文按 1 计。
+   * 按字符数判断会低估中文标题的实际像素宽度——30 个汉字的标题会被 SERP 截掉后半句。 */
+  function width(s) {
+    var n = 0;
+    var str = String(s);
+    for (var i = 0; i < str.length; i++) {
+      var code = str.charCodeAt(i);
+      n += code >= 0x2e80 && code <= 0xffef ? 2 : 1;
+    }
+    return n;
+  }
+  /* 品牌后缀放得下才加，放不下就只留主标题，避免被截断成「…— AGI H」 */
+  function withBrand(base) {
+    var full = base + ' — ' + BRAND;
+    return width(full) <= 62 ? full : base;
+  }
   function catName(id) {
     var cats = (root.AGI && root.AGI.CATEGORIES) || [];
     for (var i = 0; i < cats.length; i++) if (cats[i].id === id) return cats[i].name;
@@ -306,26 +323,28 @@
     switch (ctx.kind) {
       case 'category': {
         var c = CAT_SEO[ctx.cat.id];
-        if (c) return fill(c.title, catCount(ctx.cat.id)) + ' — ' + BRAND;
-        return ctx.cat.name + ' AI 工具推荐 · ' + catCount(ctx.cat.id) + ' 个可用选择 — ' + BRAND;
+        if (c) return withBrand(fill(c.title, catCount(ctx.cat.id)));
+        return withBrand(ctx.cat.name + ' AI 工具推荐 · ' + catCount(ctx.cat.id) + ' 个可用选择');
       }
       case 'tag': {
-        return fill(ctx.tag.title, tagCount(ctx.tag.tag)) + ' — ' + BRAND;
+        return withBrand(fill(ctx.tag.title, tagCount(ctx.tag.tag)));
       }
       case 'tool': {
         var t = ctx.tool;
         var head = t.featured ? t.name + ' 官网入口与价格' : t.name + ' 是什么';
-        var full = head + '：' + t.tagline + ' — ' + BRAND;
-        /* 长工具名会让标题超出 SERP 展示宽度，此时舍弃 tagline，避免被截断成半句 */
-        return full.length > 46 ? head + ' — ' + BRAND : full;
+        var withTag = head + '：' + t.tagline;
+        /* 依次尝试：主标题+一句话 > 主标题，任一能带品牌且不超宽就采用 */
+        if (width(withTag + ' — ' + BRAND) <= 62) return withTag + ' — ' + BRAND;
+        if (width(head + ' — ' + BRAND) <= 62) return head + ' — ' + BRAND;
+        return width(withTag) <= 60 ? withTag : head;
       }
       case 'dev': {
         var d = DEV_SEO[ctx.dev.id];
-        if (d) return d.title + ' — ' + BRAND;
-        return ctx.dev.name + '在线工具 · ' + ctx.dev.desc + ' — ' + BRAND;
+        if (d) return withBrand(d.title);
+        return withBrand(ctx.dev.name + '在线工具 · ' + ctx.dev.desc);
       }
       case 'devIndex':
-        return '在线开发者工具 ' + devtools().length + ' 款：JSON、Base64、JWT、正则等 — ' + BRAND;
+        return withBrand('在线开发者工具 ' + devtools().length + ' 款：JSON、Base64、JWT、正则');
       case 'about':
         return '关于 ' + BRAND + ' · 收录标准与数据说明';
       case 'favorites':
@@ -333,7 +352,7 @@
       case 'notfound':
         return '页面不存在 — ' + BRAND;
       default:
-        return 'AI 工具导航（2026）：' + tools().length + ' 款精选工具与 ' + devtools().length + ' 款开发者工具 — ' + BRAND;
+        return withBrand('AI 工具导航：' + tools().length + ' 款精选工具与 ' + devtools().length + ' 款开发者工具');
     }
   }
 
@@ -393,6 +412,7 @@
     h1: h1,
     priceLabel: priceLabel,
     platformLabel: platformLabel,
-    catName: catName
+    catName: catName,
+    width: width
   };
 })(typeof window !== 'undefined' ? window : globalThis);

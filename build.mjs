@@ -14,7 +14,8 @@
  *
  * 用法：node build.mjs
  * ============================================================ */
-import { readFileSync, writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -43,6 +44,21 @@ const DEVTOOLS = AGI.DEVTOOLS;
 const HUBS = SEO.HUBS || [];
 const CAT = Object.fromEntries(CATS.map((c) => [c.id, c]));
 const TOOL = Object.fromEntries(TOOLS.map((t) => [t.id, t]));
+const HUB_BY_TAG = Object.fromEntries(HUBS.map((h) => [h.tag, h]));
+
+/* ---------------- 深度内容（仅构建期读取，不打包进 dist） ----------------
+ * 缺失时整站照常构建，只是工具页少几段正文。 */
+function loadContent() {
+  const file = join(ROOT, 'content/tools.js');
+  if (!existsSync(file)) return {};
+  const sandbox = { console };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(readFileSync(file, 'utf8'), sandbox, { filename: 'content/tools.js' });
+  return sandbox.AGI_CONTENT || {};
+}
+const CONTENT = loadContent();
 
 /* ---------------- 基础工具 ---------------- */
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -175,6 +191,44 @@ function devLd(d) {
   };
 }
 
+function faqLd(c) {
+  if (!c || !c.faq || !c.faq.length) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: c.faq.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a }
+    }))
+  };
+}
+
+function orgLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SEO.BRAND,
+    url: SITE + '/',
+    description: '中文 AI 工具索引：按任务分类收录对话、写作、图像、视频、音频、编程、Agent、MCP 等方向的工具，并提供本地运行的开发者工具。'
+  };
+}
+
+function homeItemListLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'AI 工具分类',
+    numberOfItems: CATS.length,
+    itemListElement: CATS.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      url: SITE + '/category/' + c.id + '/'
+    }))
+  };
+}
+
 /* ---------------- 版式片段 ---------------- */
 function crumbs(items) {
   return (
@@ -263,6 +317,7 @@ function homeBody() {
 function categoryBody(cat) {
   const list = TOOLS.filter((t) => t.cat === cat.id);
   const h1Text = SEO.h1({ kind: 'category', cat });
+  const copy = (SEO.CAT_SEO && SEO.CAT_SEO[cat.id]) || {};
   return (
     '<div class="page-enter">' +
     '<section class="page-head"><div class="container"><div class="page-head-copy">' +
@@ -275,12 +330,32 @@ function categoryBody(cat) {
     `<h2 style="font-size:19px;margin:0 0 16px">${esc(cat.name)}工具列表（${list.length}）</h2>` +
     grid(list) +
     '</div></section>' +
+    (copy.intro || (copy.pick && copy.pick.length)
+      ? '<section class="section"><div class="container"><div class="prose">' +
+        `<h2>${esc(cat.name)}怎么选</h2>` +
+        (copy.intro ? `<p>${esc(copy.intro)}</p>` : '') +
+        (copy.pick && copy.pick.length
+          ? '<h3>按场景对号入座</h3><ol>' + copy.pick.map((p) => `<li>${esc(p)}</li>`).join('') + '</ol>'
+          : '') +
+        `<h3>${esc(cat.name)}工具速览</h3>` +
+        '<ul>' +
+        list
+          .map(
+            (t) =>
+              `<li><a href="/tool/${t.id}/">${esc(t.name)}</a>（${esc(t.vendor)}，${esc(priceLabel(t.pricing))}）— ${esc(t.tagline)}</li>`
+          )
+          .join('') +
+        '</ul>' +
+        `<p>以上 ${list.length} 个条目按收录时间排列。定价与平台支持会随时间调整，实际权益以各产品官网为准。</p>` +
+        '</div></div></section>'
+      : '') +
     '</div>'
   );
 }
 
 function toolBody(t) {
   const alt = TOOLS.filter((x) => x.cat === t.cat && x.id !== t.id).slice(0, 6);
+  const c = CONTENT[t.id] || {};
   const meta = [
     ['分类', catName(t.cat)],
     ['厂商', t.vendor],
@@ -289,6 +364,16 @@ function toolBody(t) {
     ['语言', { zh: '中文', en: '英文', multi: '多语言' }[t.lang] || t.lang],
     ['收录时间', t.added]
   ];
+  const faqHtml = (c.faq || [])
+    .map(
+      (f) =>
+        '<h3>' +
+        esc(f.q) +
+        '</h3><p>' +
+        esc(f.a) +
+        '</p>'
+    )
+    .join('');
   return (
     '<div class="page-enter"><div class="container" style="padding-top:28px">' +
     crumbs([
@@ -302,18 +387,35 @@ function toolBody(t) {
     `<p><strong>${esc(t.tagline)}</strong></p>` +
     `<p>${esc(t.desc)}</p>` +
     '<p><a class="btn btn-primary" href="' + esc(t.url) + '" target="_blank" rel="noopener noreferrer">访问 ' + esc(t.name) + ' 官网</a></p>' +
+    (c.what ? `<h2>${esc(t.name)} 是做什么的</h2><p>${esc(c.what)}</p>` : '') +
+    (c.fit && c.fit.length ? '<h3>适合</h3><ul>' + c.fit.map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>' : '') +
+    (c.notFit && c.notFit.length ? '<h3>什么情况下别选它</h3><ul>' + c.notFit.map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>' : '') +
+    (c.price ? `<h3>定价与额度</h3><p>${esc(c.price)}</p>` : '') +
+    (c.start && c.start.length ? '<h3>上手步骤</h3><ol>' + c.start.map((x) => `<li>${esc(x)}</li>`).join('') + '</ol>' : '') +
+    (c.diff ? `<h3>${esc(t.name)} 和同类怎么选</h3><p>${esc(c.diff)}</p>` : '') +
+    (faqHtml ? `<h2>常见问题</h2>${faqHtml}` : '') +
     '<h2>基本信息</h2>' +
     '<dl class="drawer-meta" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px">' +
     meta.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('') +
     '</dl>' +
     '<h2>标签</h2>' +
     '<div class="tag-cloud">' +
-    t.tags.map((tag) => `<a class="chip" href="/category/${t.cat}/?tags=${encodeURIComponent(tag)}">${esc(tag)}</a>`).join('') +
+    t.tags
+      .map((tag) => {
+        const hub = HUB_BY_TAG[tag];
+        return hub
+          ? `<a class="chip" href="/tag/${hub.slug}/">${esc(tag)}</a>`
+          : `<span class="chip" style="cursor:default">${esc(tag)}</span>`;
+      })
+      .join('') +
     '</div>' +
     (alt.length
       ? '<h2>同类工具</h2><ul>' +
         alt.map((a) => `<li><a href="/tool/${a.id}/">${esc(a.name)}</a> — ${esc(a.tagline)}</li>`).join('') +
         '</ul>'
+      : '') +
+    (c.updated
+      ? `<p class="mono" style="margin-top:24px;font-size:12px;color:var(--text-3,#868C99)">本页信息最后核对：${esc(c.updated)}</p>`
       : '') +
     `<p style="margin-top:28px"><a href="/category/${t.cat}/">← 返回${esc(catName(t.cat))}全部工具</a></p>` +
     '</article></div></div>'
@@ -463,7 +565,7 @@ mkdirSync(DIST, { recursive: true });
 
 const written = [];
 
-written.push(emit('/', renderPage({ ctx: ctxOf.home(), body: homeBody(), structured: [websiteLd()] })));
+written.push(emit('/', renderPage({ ctx: ctxOf.home(), body: homeBody(), structured: [websiteLd(), orgLd(), homeItemListLd()] })));
 
 for (const cat of CATS) {
   written.push(
@@ -544,7 +646,8 @@ for (const t of TOOLS) {
             { name: catName(t.cat), path: `/category/${t.cat}/` },
             { name: t.name, path: `/tool/${t.id}/` }
           ]),
-          toolLd(t)
+          toolLd(t),
+          faqLd(CONTENT[t.id])
         ]
       })
     )
@@ -596,15 +699,46 @@ written.push(emit('/404.html', renderPage({ ctx: ctxOf.notfound(), body: notFoun
 /* robots.txt 以仓库根目录的文件为准，构建时原样复制，避免规则两处漂移 */
 cpSync(join(ROOT, 'robots.txt'), join(DIST, 'robots.txt'));
 
+/* IndexNow 密钥文件：根目录下 32 位十六进制 .txt 原样放到站点根，供 Bing / Yandex 校验 */
+for (const f of readdirSync(ROOT)) {
+  if (/^[a-f0-9]{32}\.txt$/.test(f)) cpSync(join(ROOT, f), join(DIST, f));
+}
+
 const today = new Date().toISOString().slice(0, 10);
+
+/* 站点级最后更新时间：优先取内容源文件最后一次 git 提交日期，非 git 环境退回文件 mtime。
+ * 不使用 today —— 每次构建都把全部 URL 标成「今天更新」，会让 lastmod 变成噪音，
+ * 抓取端会直接忽略它。 */
+function gitDate(paths) {
+  try {
+    const out = execFileSync('git', ['log', '-1', '--format=%cs', '--', ...paths], { cwd: ROOT, encoding: 'utf8' }).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(out)) return out;
+  } catch (e) {
+    /* 非 git 环境，继续走 mtime */
+  }
+  let latest = '';
+  for (const f of paths) {
+    try {
+      const d = new Date(statSync(join(ROOT, f)).mtime).toISOString().slice(0, 10);
+      if (d > latest) latest = d;
+    } catch (e) {
+      /* 文件不存在时跳过 */
+    }
+  }
+  return latest || today;
+}
+const SITE_UPDATED = gitDate(['assets/js/data.js', 'assets/js/seo.js', 'content/tools.js', 'build.mjs']);
+
+function lastmodOf(routePath) {
+  const m = /^\/tool\/([^/]+)\/$/.exec(routePath);
+  if (m && CONTENT[m[1]] && CONTENT[m[1]].updated) return CONTENT[m[1]].updated;
+  return SITE_UPDATED;
+}
+
 /* sitemap 与 urls.txt 共用同一份可收录集合：排除 noindex 的 404 与收藏页 */
 const indexable = written.filter((p) => p !== '/404.html' && p !== '/favorites/');
 const sitemapEntries = indexable
-  .map((p) => ({ loc: SITE + p, lastmod: today, priority: p === '/' ? '1.0' : p.split('/').filter(Boolean).length >= 2 ? '0.7' : '0.8' }))
-  .map(
-    (e) =>
-      `  <url><loc>${e.loc}</loc><lastmod>${e.lastmod}</lastmod><changefreq>weekly</changefreq><priority>${e.priority}</priority></url>`
-  )
+  .map((p) => `  <url><loc>${SITE + p}</loc><lastmod>${lastmodOf(p)}</lastmod></url>`)
   .join('\n');
 
 writeFileSync(
@@ -630,6 +764,7 @@ try {
 
 /* ---------------- 构建后自检 ---------------- */
 const issues = [];
+const thin = [];
 const seenTitles = new Map();
 const routes = new Set(pages.map((p) => p.path));
 
@@ -639,11 +774,22 @@ for (const page of pages) {
   else if (seenTitles.has(title)) issues.push(`title 重复：${page.path} 与 ${seenTitles.get(title)}`);
   else seenTitles.set(title, page.path);
 
+  if (title && SEO.width(title) > 62) issues.push(`${page.path} 的 title 显示宽度 ${SEO.width(title)}（上限 62，约 31 个汉字）`);
+
   const h1s = (page.html.match(/<h1[\s>]/g) || []).length;
   if (h1s !== 1) issues.push(`${page.path} 的 h1 数量为 ${h1s}`);
 
+  /* 正文厚度：剥掉标签后数汉字。工具页低于 500 字，很难在「工具名 + 用途」这类词上
+   * 超过已有站点；分类页有 intro 与工具速览，底线按 600 字。 */
+  const mainHtml = (/<main id="app"[^>]*>([\s\S]*?)<\/main>/.exec(page.html) || [])[1] || '';
+  const plain = mainHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  const cjk = (plain.match(/[\u4e00-\u9fff]/g) || []).length;
+  if (page.path.startsWith('/tool/') && cjk < 500) thin.push({ path: page.path, cjk, need: 500, where: 'content/tools.js' });
+  if (page.path.startsWith('/category/') && cjk < 600) thin.push({ path: page.path, cjk, need: 600, where: 'seo.js 的 CAT_SEO.intro' });
+
   if (!/rel="canonical"/.test(page.html)) issues.push(`${page.path} 缺少 canonical`);
   if (/href="#\//.test(page.html)) issues.push(`${page.path} 仍含 hash 路由链接`);
+  if (/href="\/[^"]*\?tags=/.test(page.html)) issues.push(`${page.path} 仍含 ?tags= 参数内链`);
 
   for (const m of page.html.matchAll(/href="(\/[^"#?]*)"/g)) {
     const href = m[1];
@@ -654,11 +800,19 @@ for (const page of pages) {
 
 console.log(`构建完成：${pages.length} 个 HTML 页面 · ${CATS.length} 个分类 · ${TOOLS.length} 条工具 · ${DEVTOOLS.length} 款开发工具`);
 console.log(`输出目录：${DIST}`);
-console.log(`sitemap / urls.txt：${indexable.length} 条 URL`);
+console.log(`sitemap / urls.txt：${indexable.length} 条 URL · 内容基准日 ${SITE_UPDATED}`);
+console.log(`深度内容：${Object.keys(CONTENT).length} / ${TOOLS.length} 条工具页已补齐`);
 if (issues.length) {
-  console.warn(`\n自检发现 ${issues.length} 处问题：`);
+  console.warn(`\n结构自检发现 ${issues.length} 处问题：`);
   for (const i of issues.slice(0, 20)) console.warn(`  - ${i}`);
   if (issues.length > 20) console.warn(`  ... 其余 ${issues.length - 20} 处省略`);
 } else {
-  console.log('自检通过：title 唯一、h1 唯一、canonical 齐备、内链可达');
+  console.log('结构自检通过：title 唯一且不超宽、h1 唯一、canonical 齐备、无参数内链、内链可达');
+}
+if (thin.length) {
+  const toolThin = thin.filter((x) => x.path.startsWith('/tool/'));
+  const catThin = thin.filter((x) => x.path.startsWith('/category/'));
+  console.log(`内容缺口：工具页 ${toolThin.length} 个、分类页 ${catThin.length} 个待补正文`);
+  for (const x of thin.slice(0, 6)) console.log(`  · ${x.path} 当前 ${x.cjk} 字 → 目标 ${x.need} 字（写 ${x.where}）`);
+    if (thin.length > 6) console.log(`  · 其余 ${thin.length - 6} 个页面待补，补齐优先级见 docs/seo-strategy.md`);
 }
