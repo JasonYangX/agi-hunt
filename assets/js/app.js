@@ -203,7 +203,7 @@
         '<div class="tc-top">' +
           logo(t) +
           '<div class="tc-id">' +
-            '<h3><button type="button" class="tc-title" data-tool="' + t.id + '">' + esc(t.name) + '</button>' +
+            '<h3><a class="tc-title" href="/tool/' + t.id + '/" data-tool="' + t.id + '">' + esc(t.name) + '</a>' +
               (t.featured ? '<span title="编辑精选" style="color:var(--accent);font-size:11px">●</span>' : '') + '</h3>' +
             '<div class="vendor">' + esc(t.vendor) + ' · ' + esc(catName(t.cat)) + '</div>' +
           '</div>' +
@@ -244,10 +244,10 @@
     var list = filteredTools();
     var catCount = cat ? TOOLS.filter(function (t) { return t.cat === cat.id; }).length : 0;
     var eyebrow = cat ? 'CATEGORY · ' + cat.name : 'AI TOOL INDEX · 2026';
-    var heading = cat ? cat.name + ' AI 工具' : 'AI 工具库';
+    var heading = cat ? ((SEO && SEO.h1 ? SEO.h1({ kind: 'category', cat: cat }) : '') || cat.name + ' AI 工具') : 'AI 工具库';
     var lede = cat
       ? cat.desc + '。共 ' + catCount + ' 个工具，可按定价与标签进一步筛选，点击卡片查看详情与官网入口。'
-      : TOOLS.length + ' 个经过筛选的工具与站点，覆盖对话、创作、编程、Agent 技能、MCP 服务与 AI 学习。支持关键词、分类、定价与标签交叉检索。';
+      : 'AGI Hunt 是一个中文 AI 工具导航：收录 ' + TOOLS.length + ' 个经过筛选的工具与站点，覆盖对话、创作、编程、Agent 技能、MCP 服务与 AI 学习。支持关键词、分类、定价与标签交叉检索。';
 
     app.innerHTML = '' +
       '<div class="page-enter">' +
@@ -336,6 +336,50 @@
       '</div>';
 
     renderResultsArea();
+
+    /* 分类页补齐正文与内链：与 build.mjs 的 categoryBody 保持一致，
+       避免客户端渲染后丢失「怎么选」段落与底部链接 */
+    if (cat) {
+      var copy = (SEO && SEO.CAT_SEO && SEO.CAT_SEO[cat.id]) || {};
+      var extra = '';
+      if (copy.intro) {
+        extra += '<section class="section"><div class="container"><div class="prose">' +
+          '<h2>' + esc(copy.h1 || cat.name) + '怎么选</h2>' +
+          '<p>' + esc(copy.intro) + '</p>' +
+          (copy.pick && copy.pick.length
+            ? '<ul>' + copy.pick.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>'
+            : '') +
+          '</div></div></section>';
+      }
+      var hubs = hubsOfCategory(cat.id);
+      if (hubs.length) {
+        extra += '<section class="section"><div class="container">' +
+          '<h2 style="font-size:19px;margin:0 0 12px">相关合集</h2>' +
+          '<ul style="columns:2;line-height:2">' +
+          hubs.map(function (h) {
+            return '<li><a href="/tag/' + h.slug + '/">' + esc(h.name) + '</a> — ' + esc(hubBrief(h)) + '</li>';
+          }).join('') +
+          '</ul></div></section>';
+      }
+      extra += '<section class="section"><div class="container">' +
+        '<h2 style="font-size:19px;margin:0 0 12px">其他分类</h2>' +
+        '<ul style="columns:2;line-height:2">' +
+        CATS.filter(function (c) { return c.id !== cat.id; }).map(function (c) {
+          return '<li><a href="/category/' + c.id + '/">' + esc(c.name) + '</a> — ' + esc(c.desc) + '</li>';
+        }).join('') +
+        '</ul></div></section>';
+      app.insertAdjacentHTML('beforeend', extra);
+    }
+  }
+
+  function hubsOfCategory(catId) {
+    return ((SEO && SEO.HUBS) || []).filter(function (h) {
+      return TOOLS.some(function (t) { return t.cat === catId && t.tags.indexOf(h.tag) >= 0; });
+    });
+  }
+
+  function hubBrief(h) {
+    return h.intro.split('。')[0] + '。';
   }
 
   function activeFilterChips() {
@@ -522,6 +566,19 @@
     AGI.Dev.mount(current.id, panel);
     var head = $('.dev-panel-head', panel);
     if (head) head.insertAdjacentHTML('beforeend', drawerToggleHtml('data-toggle-dev-nav', 'dev-nav', '工具列表', devNavOpen, 'dev-nav-toggle'));
+
+    /* 工具页正文：说明与常见用途，与 build.mjs 的 devBody 保持一致 */
+    var dvCopy = (SEO && SEO.DEV_SEO && SEO.DEV_SEO[current.id]) || {};
+    if (dvCopy.lead || (dvCopy.use && dvCopy.use.length)) {
+      var dvExtra = '<section class="section"><div class="container"><div class="prose">' +
+        (dvCopy.lead ? '<h2>使用说明</h2><p>' + esc(dvCopy.lead) + '</p>' : '') +
+        (dvCopy.use && dvCopy.use.length
+          ? '<h2>常见用途</h2><ul>' + dvCopy.use.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul>'
+          : '') +
+        '</div></div></section>';
+      var dvRoot = $('.page-enter', app);
+      if (dvRoot) dvRoot.insertAdjacentHTML('beforeend', dvExtra);
+    }
   }
 
   /* ---------------- 关于页 ---------------- */
@@ -577,6 +634,98 @@
         '<h3>没有找到这个页面</h3><p>可以回到工具库重新检索，或从开发者工具箱继续。</p>' +
         '<a class="btn btn-primary" href="/">返回 AI 工具库</a></div>' +
       '</div></section></div>';
+  }
+
+  /* ---------------- 工具详情页（与 build.mjs 的 toolBody 保持同构） ----------------
+   * 直接访问 /tool/:id/ 时渲染完整文章，而不是用全站卡片列表覆盖正文；
+   * 卡片点击仍走抽屉预览，抓取器读到的是这里与预渲染一致的 H1 / 正文 / 内链。
+   */
+  function renderToolPage(t) {
+    var alt = TOOLS.filter(function (x) { return x.cat === t.cat && x.id !== t.id; }).slice(0, 6);
+    var meta = [
+      ['分类', catName(t.cat)],
+      ['厂商', t.vendor],
+      ['定价', priceLabel(t.pricing)],
+      ['平台', SEO ? SEO.platformLabel(t.platforms) : (t.platforms || []).join('、')],
+      ['语言', { zh: '中文', en: '英文', multi: '多语言' }[t.lang] || t.lang],
+      ['收录时间', t.added]
+    ];
+    var hubs = ((SEO && SEO.HUBS) || []).filter(function (h) { return t.tags.indexOf(h.tag) >= 0; });
+
+    app.innerHTML = '' +
+      '<div class="page-enter"><div class="container" style="padding-top:28px">' +
+      '<nav aria-label="面包屑" style="font-size:12px;color:var(--text-3,#868C99);margin-bottom:14px">' +
+        '<a href="/" style="color:inherit">AI 工具库</a><span style="margin:0 6px">/</span>' +
+        '<a href="/category/' + t.cat + '/" style="color:inherit">' + esc(catName(t.cat)) + '</a>' +
+        '<span style="margin:0 6px">/</span><span>' + esc(t.name) + '</span>' +
+      '</nav>' +
+      '<article class="prose">' +
+        '<h1>' + esc(t.name) + '</h1>' +
+        '<p style="font-size:15px;color:var(--text-2,#4B505B)">' + esc(t.vendor) + ' · ' + esc(catName(t.cat)) + ' · ' + esc(priceLabel(t.pricing)) + '</p>' +
+        '<p><strong>' + esc(t.tagline) + '</strong></p>' +
+        '<p>' + esc(t.desc) + '</p>' +
+        '<p><a class="btn btn-primary" href="' + esc(t.url) + '" target="_blank" rel="noopener noreferrer">访问 ' + esc(t.name) + ' 官网</a></p>' +
+        '<h2>基本信息</h2>' +
+        '<dl class="drawer-meta" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px">' +
+          meta.map(function (kv) { return '<div><dt>' + esc(kv[0]) + '</dt><dd>' + esc(kv[1]) + '</dd></div>'; }).join('') +
+        '</dl>' +
+        '<h2>标签</h2>' +
+        '<div class="tag-cloud">' +
+          t.tags.map(function (tag) { return '<a class="chip" href="/category/' + t.cat + '/?tags=' + encodeURIComponent(tag) + '">' + esc(tag) + '</a>'; }).join('') +
+        '</div>' +
+        (hubs.length
+          ? '<h2>相关合集</h2><ul>' + hubs.map(function (h) {
+              return '<li><a href="/tag/' + h.slug + '/">' + esc(h.name) + '</a> — ' + esc(hubBrief(h)) + '</li>';
+            }).join('') + '</ul>'
+          : '') +
+        (alt.length
+          ? '<h2>同类工具</h2><ul>' + alt.map(function (a) {
+              return '<li><a href="/tool/' + a.id + '/">' + esc(a.name) + '</a> — ' + esc(a.tagline) + '</li>';
+            }).join('') + '</ul>'
+          : '') +
+        '<p style="margin-top:28px"><a href="/category/' + t.cat + '/">← 返回' + esc(catName(t.cat)) + '全部工具</a></p>' +
+      '</article></div></div>';
+  }
+
+  /* ---------------- 合集页（/tag/:slug/） ---------------- */
+  function renderTagPage(hub) {
+    var list = TOOLS.filter(function (t) { return t.tags.indexOf(hub.tag) >= 0; });
+    app.innerHTML = '' +
+      '<div class="page-enter">' +
+      '<section class="page-head"><div class="container"><div class="page-head-copy">' +
+        '<nav aria-label="面包屑" style="font-size:12px;color:var(--text-3,#868C99);margin-bottom:14px">' +
+          '<a href="/" style="color:inherit">AI 工具库</a><span style="margin:0 6px">/</span><span>' + esc(hub.name) + '</span>' +
+        '</nav>' +
+        '<span class="eyebrow">COLLECTION · ' + esc(hub.tag) + '</span>' +
+        '<h1>' + esc(hub.name) + '</h1>' +
+        '<p>共 ' + list.length + ' 个条目，均标注定价与平台，点击卡片查看详情与官网入口。</p>' +
+      '</div>' +
+      '<nav aria-label="按分类浏览" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:20px">' +
+        '<a class="chip" href="/">全部 ' + TOOLS.length + '</a>' +
+        CATS.map(function (c) {
+          return '<a class="chip" href="/category/' + c.id + '/">' + esc(c.name) +
+            '<span style="opacity:.55;margin-left:6px">' + countBy(function (t) { return t.cat === c.id; }) + '</span></a>';
+        }).join('') +
+      '</nav></div></section>' +
+      '<section class="section"><div class="container">' +
+        '<h2 style="font-size:19px;margin:0 0 16px">' + esc(hub.name) + '列表（' + list.length + '）</h2>' +
+        '<div class="tool-grid">' + list.map(toolCard).join('') + '</div>' +
+      '</div></section>' +
+      '<section class="section"><div class="container"><div class="prose">' +
+        '<h2>关于' + esc(hub.name) + '</h2><p>' + esc(hub.intro) + '</p>' +
+      '</div></div></section>' +
+      '<section class="section"><div class="container">' +
+        '<h2 style="font-size:19px;margin:0 0 12px">按场景浏览</h2>' +
+        '<ul style="columns:2;line-height:2">' +
+          CATS.map(function (c) {
+            return '<li><a href="/category/' + c.id + '/">' + esc(hubCatTitle(c)) + '</a> — ' + esc(c.desc) + '</li>';
+          }).join('') +
+        '</ul>' +
+      '</div></section></div>';
+  }
+
+  function hubCatTitle(c) {
+    return (SEO && SEO.h1 ? SEO.h1({ kind: 'category', cat: c }) : '') || c.name;
   }
 
   /* ---------------- 详情抽屉 ---------------- */
@@ -768,6 +917,10 @@
     if (head === 'tool' && TOOL_BY_ID[segs[1]]) {
       return { kind: 'tool', tool: TOOL_BY_ID[segs[1]], params: params, segs: segs };
     }
+    if (head === 'tag' && segs[1]) {
+      var hub = SEO && SEO.hubBySlug ? SEO.hubBySlug(segs[1]) : null;
+      if (hub) return { kind: 'tag', tag: hub, params: params, segs: segs };
+    }
     if (head === 'dev') {
       if (!segs[1]) return { kind: 'devIndex', params: params, segs: segs };
       return { kind: 'dev', dev: DEV_BY_ID[segs[1]] || DEVTOOLS[0], params: params, segs: segs };
@@ -888,17 +1041,12 @@
       renderAbout();
       setActiveNav('about');
     } else if (r.kind === 'tool') {
-      state.cat = 'all'; state.query = ''; state.pricing = 'all'; state.tags = []; state.sort = 'recommended';
-      renderTools();
+      /* 直接访问详情页：渲染完整文章，避免用全站卡片列表覆盖预渲染正文 */
+      renderToolPage(r.tool);
       setActiveNav('home');
-      /* 详情页的 H1 用工具名，与预渲染版本保持一致 */
-      var th1 = $('#app h1');
-      if (th1) th1.textContent = r.tool.name;
-      var tlede = $('#app .page-head-copy p');
-      if (tlede) tlede.textContent = r.tool.tagline + '（' + r.tool.vendor + ' · ' + catName(r.tool.cat) + '）';
-      var teyebrow = $('#app .eyebrow');
-      if (teyebrow) teyebrow.textContent = 'TOOL · ' + catName(r.tool.cat);
-      openTool(r.tool.id, false);
+    } else if (r.kind === 'tag') {
+      renderTagPage(r.tag);
+      setActiveNav('home');
     } else {
       renderNotFound();
       setActiveNav('');
@@ -925,6 +1073,8 @@
     if (a.hasAttribute('download')) return;
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) !== '/' || href.charAt(1) === '/') return;
+    /* 卡片标题保留真实 href 供抓取器与中键打开，左键点击仍走抽屉预览 */
+    if (a.hasAttribute('data-tool')) { e.preventDefault(); return; }
     e.preventDefault();
     if (drawer.classList.contains('is-open')) {
       state.drawerPushed = false;
