@@ -18,7 +18,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # 需要完整历史：build.mjs 用 git log 计算每页 lastmod，
+      # 浅克隆下只能看到最新一条提交，sitemap 会把所有 URL 标成「今天更新」
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
