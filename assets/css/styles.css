@@ -177,6 +177,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .btn-quiet:hover { background: var(--surface-2); color: var(--ink); }
 
 .btn-sm { height: 32px; padding: 0 11px; font-size: 13px; border-radius: 8px; }
+.btn.is-on {
+  background: var(--accent-soft); border-color: transparent;
+  color: var(--accent-ink); font-weight: 550;
+}
 .btn-block { width: 100%; }
 
 .icon-btn {
@@ -851,6 +855,12 @@ html[data-theme="dark"] .dev-nav-item.is-on .b { background: rgba(0, 0, 0, .3); 
   font-size: 11px; font-family: var(--font-mono); letter-spacing: .08em;
   text-transform: uppercase; color: var(--ink-3);
 }
+/* 面板标题栏控件较多时允许换行（JSON 工具的视图切换 + 输出格式 + 排序） */
+.field-head--wrap { flex-wrap: wrap; row-gap: 6px; }
+.field-head label.check {
+  font-family: var(--font-sans); font-size: 12px; letter-spacing: 0;
+  text-transform: none; color: var(--ink-2);
+}
 .field-head .spacer { flex: 1; }
 .field-actions { display: flex; align-items: center; gap: 4px; }
 
@@ -869,6 +879,53 @@ select.input-select {
   transition: border-color .16s, box-shadow .16s, background .16s;
 }
 textarea.input-area { resize: vertical; min-height: 220px; }
+
+/* ---------- 带行号的输入框 ----------
+ * 边框、圆角与聚焦环由容器持有；行号轨道绝对定位于容器内边（padding box），
+ * 既不覆盖边框，也不参与高度计算，textarea 仍按自身高度滚动。 */
+.input-wrap {
+  position: relative;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+  transition: border-color .16s, box-shadow .16s, background .16s;
+}
+.input-wrap:focus-within {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.input-wrap > .input-area {
+  display: block; width: 100%;
+  padding: 12px 13px 12px 56px;
+  border: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
+  tab-size: 4;
+}
+.input-wrap > .input-area:focus {
+  border: 0; background: transparent; box-shadow: none;
+}
+.input-gutter {
+  position: absolute; top: 0; left: 0; bottom: 0; z-index: 1;
+  width: 46px; overflow: hidden; pointer-events: none;
+  border-right: 1px solid var(--line);
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  text-align: right;
+  user-select: none; -webkit-user-select: none;
+}
+.input-gutter-inner {
+  margin: 0; padding: 12px 9px 12px 0;
+  font-family: inherit; font-size: 12.5px; line-height: 1.7;
+  white-space: pre; text-align: right;
+  will-change: transform;
+}
+.ln-mirror {
+  position: absolute; top: 0; left: -9999px;
+  visibility: hidden; pointer-events: none;
+  padding: 0; margin: 0; border: 0;
+  white-space: pre-wrap; overflow-wrap: break-word;
+}
 textarea.input-area:focus,
 input.input-line:focus,
 select.input-select:focus {
@@ -900,6 +957,83 @@ select.input-select {
   color: var(--ink-2);
 }
 .code-out.is-compact { min-height: 0; max-height: none; }
+/* JSON 输出：会话式代码不做折行，靠横向滚动保持层级与对齐 */
+.code-out.is-code { white-space: pre; word-break: normal; tab-size: 4; overscroll-behavior-x: contain; }
+.code-out.is-stale { opacity: .5; }
+
+/* ---------- 带行号的输出区 ---------- */
+.code-scroll {
+  display: flex;
+  min-height: 220px; max-height: 460px; overflow: auto;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg-elevated);
+  overscroll-behavior: contain;
+}
+.code-scroll[hidden] { display: none; }
+.code-scroll.is-stale { opacity: .5; }
+.code-gutter {
+  flex: 0 0 auto; position: sticky; left: 0; z-index: 1;
+  margin: 0; padding: 13px 9px 13px 12px;
+  text-align: right; color: var(--ink-4);
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7;
+  white-space: pre; user-select: none; -webkit-user-select: none;
+}
+.code-scroll .code-out.is-code {
+  flex: 0 0 auto;
+  margin: 0; padding: 13px 14px 13px 11px;
+  border: 0; border-radius: 0; background: transparent;
+  min-height: 0; max-height: none; overflow: visible;
+}
+
+/* ---------- JSON 树视图 ---------- */
+.json-tree {
+  margin: 0; padding: 10px 12px;
+  min-height: 220px; max-height: 460px; overflow: auto;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg-elevated);
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7;
+  color: var(--ink-2);
+}
+.json-tree[hidden] { display: none; }
+.json-tree.is-stale { opacity: .5; }
+.jt-row {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 1px 6px 1px 2px; border-radius: 4px;
+  cursor: copy; outline: none; min-width: 0;
+}
+.jt-row:hover { background: var(--surface-2); }
+.jt-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.jt-label { display: inline-flex; flex: 0 0 auto; }
+.jt-twisty {
+  flex: 0 0 auto; width: 14px; height: 14px; position: relative;
+  cursor: pointer; border-radius: 3px; align-self: center;
+}
+.jt-twisty::before {
+  content: ''; position: absolute; left: 4px; top: 3px;
+  border-left: 5px solid var(--ink-4);
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  transform-origin: 2px 50%; transition: transform .12s var(--ease);
+}
+.jt-row[aria-expanded="true"] > .jt-twisty::before { transform: rotate(90deg); }
+.jt-twisty.is-leaf { visibility: hidden; }
+.jt-key { color: var(--ink); flex: 0 0 auto; }
+.jt-punct { color: var(--ink-4); flex: 0 0 auto; }
+.jt-meta { color: var(--ink-4); font-size: 11px; flex: 0 0 auto; }
+.jt-val { min-width: 0; }
+.jt-val--str { color: var(--ok); }
+.jt-val--num { color: var(--accent-ink); }
+.jt-val--bool { color: var(--warn); }
+.jt-val--null { color: var(--ink-3); font-style: italic; }
+.jt-group { padding-left: 11px; margin-left: 0; border-left: 1px dashed var(--line); }
+.jt-group[hidden] { display: none; }
+.jt-more {
+  height: 24px; padding: 0 9px; margin: 3px 0 3px 22px;
+  border-radius: 6px; border: 0; background: var(--accent-soft);
+  color: var(--accent-ink); font-size: 11.5px; cursor: pointer;
+}
+.jt-note { color: var(--ink-3); font-size: 12px; padding: 4px 6px; }
 
 .status-line {
   display: flex; align-items: center; gap: 8px;
@@ -911,8 +1045,11 @@ select.input-select {
 }
 .status-line.ok .st { background: var(--ok); }
 .status-line.err .st { background: var(--danger); }
+.status-line.warn .st { background: var(--warn); }
 .status-line.ok { color: var(--ok); }
 .status-line.err { color: var(--danger); }
+.status-line.warn { color: var(--warn); }
+.status-line .msg { min-width: 0; }
 
 .seg {
   display: inline-flex; padding: 2px; gap: 2px;
@@ -1179,6 +1316,13 @@ select.input-select {
   .results-count { order: 3; width: 100%; }
   .search-inline input, #palette-input { font-size: 16px; }
   textarea.input-area, input.input-line { font-size: 16px; }
+  /* 窄屏去掉弹性占位，让标题栏控件靠左自然换行，避免最后一个按钮被单独挤到一行 */
+  .field-head--wrap { gap: 6px; }
+  .field-head--wrap .spacer { display: none; }
+  .field-head--wrap .btn-sm { padding: 0 9px; }
+  .field-head--wrap .seg button { padding: 0 8px; }
+  .field-head--wrap .input-select { max-width: 108px; }
+  .json-out-label { display: none; }
 
   .drawer { width: 100%; border-left: 0; }
   .drawer-body { padding: 22px 18px 30px; }
@@ -1187,10 +1331,17 @@ select.input-select {
   .dev-panel-body { padding: 18px; }
   textarea.input-area { min-height: 160px; }
   .code-out { min-height: 160px; max-height: 340px; }
+  .code-scroll { min-height: 160px; max-height: 340px; }
+  .json-tree { min-height: 160px; max-height: 340px; }
   .shade-strip { grid-template-columns: repeat(4, 1fr); }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .toast-root { bottom: 18px; width: calc(100% - 32px); }
   .toast { max-width: 100%; }
+}
+
+/* 结果区控件较多：极窄屏主动折成两行，避免最后一个按钮被挤到第三行 */
+@media (max-width: 440px) {
+  .field-head--out .spacer { display: block; flex: 1 0 100%; height: 0; margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

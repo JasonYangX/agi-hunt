@@ -1077,7 +1077,7 @@ AGI.TOOLS = [
 
 /* ---------- 开发者工具元数据 ---------- */
 AGI.DEVTOOLS = [
-  { id: 'json', name: 'JSON 格式化', badge: '{ }', group: '数据', desc: '校验、格式化、压缩与键排序' },
+  { id: 'json', name: 'JSON 格式化', badge: '{ }', group: '数据', desc: '校验、格式化、压缩与键排序，支持 JSONC 与树视图' },
   { id: 'base64', name: 'Base64 编解码', badge: 'B64', group: '编码', desc: 'UTF-8 安全的双向转换' },
   { id: 'url', name: 'URL 编解码', badge: '%', group: '编码', desc: '转义、还原与查询参数拆解' },
   { id: 'hash', name: '哈希计算', badge: '#', group: '编码', desc: 'SHA 系列摘要，本地计算' },
