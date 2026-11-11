@@ -134,13 +134,15 @@
     var h = (catHue(tool.cat) + (hash(tool.name) % 36) - 18 + 360) % 360;
     var initial = (tool.name || '?').trim().charAt(0).toUpperCase();
     var host = tool.logoHost || hostOf(tool.url);
+    var local = tool.logo || '';
     var known = host && LOGO_OK.has(host);
-    var failed = host && LOGO_FAIL.has(host);
+    var failed = !local && host && LOGO_FAIL.has(host);
+    var src = local || (host ? 'https://' + host + '/apple-touch-icon.png' : '');
     var cls = 'mono-mark' + (size ? ' is-' + size : '');
     return '<span class="' + cls + '" style="--h:' + h + '" aria-hidden="true">' +
       '<span class="logo-initial">' + esc(initial) + '</span>' +
-      (host && !failed
-        ? '<img class="tool-logo' + (known ? ' is-loaded' : '') + '" src="https://' + host + '/apple-touch-icon.png" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-logo data-host="' + esc(host) + '" data-step="0">'
+      (src && !failed
+        ? '<img class="tool-logo' + (known ? ' is-loaded' : '') + '" src="' + esc(src) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-logo data-host="' + esc(host) + '" data-step="0">'
         : '') +
       '</span>';
   }

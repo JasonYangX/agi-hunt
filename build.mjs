@@ -272,10 +272,13 @@ function catChips(activeId) {
 
 function card(t) {
   const initial = (t.name || '?').trim().charAt(0).toUpperCase();
+  const logoImg = t.logo
+    ? `<img class="tool-logo is-loaded" src="${esc(t.logo)}" alt="" loading="lazy" decoding="async">`
+    : '';
   return (
     '<article class="tool-card">' +
     '<div class="tc-top">' +
-    `<span class="mono-mark" style="--h:${hueOf(t)}" aria-hidden="true"><span class="logo-initial">${esc(initial)}</span></span>` +
+    `<span class="mono-mark" style="--h:${hueOf(t)}" aria-hidden="true"><span class="logo-initial">${esc(initial)}</span>${logoImg}</span>` +
     '<div class="tc-id">' +
     `<h3><a class="tc-title" href="/tool/${t.id}/">${esc(t.name)}</a></h3>` +
     `<div class="vendor">${esc(t.vendor)} · ${esc(catName(t.cat))}</div>` +
