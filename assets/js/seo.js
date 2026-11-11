@@ -37,7 +37,7 @@
     writing: {
       h1: 'AI 写作工具',
       title: 'AI 写作工具推荐：润色、改写与文案生成 {n} 款对比',
-      desc: 'AI 写作与润色工具合集，共 {n} 款：Grammarly、DeepL Write、秘塔写作猫、Jasper 等，覆盖语法校对、学术润色、改写降重与营销文案批量生成。',
+      desc: 'AI 写作与润色工具合集，共 {n} 款：Grammarly、DeepL Write、秘塔写作猫、Jasper 等，覆盖语法校对、学术润色、改写降重、多语翻译与营销文案批量生成。',
       intro: '写作类工具的分水岭是「改」还是「写」：Grammarly、QuillBot、DeepL Write 强在逐句润色与语体转换，Jasper、Copy.ai 更偏营销文案的批量产出。中文长文场景下，通用大模型往往比专用写作工具更灵活。',
       pick: ['英文语法与学术润色：Grammarly、DeepL Write', '中文改写与降重：秘塔写作猫', '营销文案批量化：Jasper、Copy.ai']
     },
